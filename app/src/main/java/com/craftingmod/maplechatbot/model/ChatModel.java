@@ -28,6 +28,7 @@ public class ChatModel
         this.WID = WorldID;
         this.Msg = Message;
     }
+
     public int getSenderAccountID(){
         return this.SenderAID;
     }

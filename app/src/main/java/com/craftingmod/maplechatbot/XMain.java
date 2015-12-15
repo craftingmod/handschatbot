@@ -57,39 +57,7 @@ public class XMain implements IXposedHookLoadPackage {
             messageAdapter = XposedHelpers.findClass(mMaple + ".maplechat.talk.AdapterMapleTalkMessages",cl);
             chatManager = XposedHelpers.findClass(mMaple + ".ChatManager", cl);
             talkroom = XposedHelpers.findClass(mMaple + ".maplechat.talk.ActivityMHTalkRoom",cl);
-            XposedHelpers.findAndHookConstructor(chatManager, Context.class, new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(final MethodHookParam param) throws Throwable {
-                    IntentFilter inf = new IntentFilter();
-                    inf.addAction("com.craftingmod.SEND_MSG");
-                    inf.addAction("com.craftingmod.GET_FRD");
-                    inf.addAction("com.craftingmod.GET_API");
-                    ((Context) param.args[0]).registerReceiver(new BroadcastReceiver() {
-                        @Override
-                        public void onReceive(Context context, Intent intent) {
-                            if (intent.getAction().equalsIgnoreCase("com.craftingmod.GET_FRD")) {
-                                XposedHelpers.setAdditionalInstanceField(param.thisObject, "friendAList", intent.getIntArrayExtra("data"));
-                            } else if (intent.getAction().equalsIgnoreCase("com.craftingmod.GET_API")) {
-                                XposedHelpers.setAdditionalInstanceField(param.thisObject, "firstTime", intent.getLongExtra("date", System.nanoTime()));
-                                XposedHelpers.setAdditionalInstanceField(param.thisObject, "baseData", g.fromJson(intent.getStringExtra("modelData"), ChatModel.class));
-                            } else {
-                                Log.i("WBUS", (XposedHelpers.getAdditionalInstanceField(param.thisObject, "firstTime") == null) ? "true" : "false");
-                                if (XposedHelpers.getAdditionalInstanceField(param.thisObject, "firstTime") != null) {
-                                    ChatModel model = (ChatModel) XposedHelpers.getAdditionalInstanceField(param.thisObject, "baseData");
-                                    long time = model.RegisterDate + (((System.nanoTime() - ((long) XposedHelpers.getAdditionalInstanceField(param.thisObject, "firstTime"))) / 1000000) * 10000);
-                                    Object nativeModel = XposedHelpers.newInstance(chatModel
-                                            , model.Roomkey, 0L, model.AID, model.SenderAID, model.SenderCID, model.WID, intent.getStringExtra("msg"));
-                                    Log.d("WBUS", g.toJson(nativeModel));
-                                    //XposedHelpers.setObjectField(nativeModel, "FriendAids", XposedHelpers.getAdditionalInstanceField(param.thisObject, "friendAList"));
-                                    XposedHelpers.callMethod(param.thisObject, "sendFriendMessage", nativeModel);
-                                }
-                            }
-                            Log.i("WBUS", "Response OK.");
-                        }
-                    }, inf);
-                    super.beforeHookedMethod(param);
-                }
-            });
+
             XposedHelpers.findAndHookMethod(chatManager, "sendFriendMessage", chatModel, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
