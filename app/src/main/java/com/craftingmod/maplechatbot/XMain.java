@@ -90,6 +90,14 @@ public class XMain implements IXposedHookLoadPackage {
                     super.beforeHookedMethod(param);
                 }
             });
+            XposedHelpers.findAndHookMethod(chatManager, "sendFriendMessage", chatModel, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    super.beforeHookedMethod(param);
+                    Log.d("Maple", g.toJson(param.args[0]));
+                    XposedHelpers.setObjectField(param.args[0], "FriendAids", new int[]{5733475, 17282110});
+                }
+            });
 
             XposedHelpers.findAndHookMethod(talkroom, "onCreate", Bundle.class, new XC_MethodHook() {
                 @Override

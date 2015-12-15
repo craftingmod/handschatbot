@@ -22,6 +22,7 @@ public abstract class BaseMapleHooker extends XC_MethodHook {
     protected Class<?> global;
     protected Class<?> messageAdapter;
     protected Class<?> chatManager;
+    protected Class<?> talkroom;
 
 
     public BaseMapleHooker(LoadPackageParam pm){
@@ -35,7 +36,7 @@ public abstract class BaseMapleHooker extends XC_MethodHook {
         global = getMapleClass(".G");
         messageAdapter = getMapleClass(".maplechat.talk.AdapterMapleTalkMessages");
         chatManager = getMapleClass(".ChatManager");
-
+        talkroom = getMapleClass(".maplechat.talk.ActivityMHTalkRoom");
     }
     protected Class<?> getMapleClass(String clname){
         return XposedHelpers.findClass(MapleRoot + clname, cl);

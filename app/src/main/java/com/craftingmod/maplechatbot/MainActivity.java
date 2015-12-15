@@ -16,6 +16,7 @@ import android.widget.TextView;
 import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
+import com.craftingmod.maplechatbot.chat.CharacterFinder;
 import com.craftingmod.maplechatbot.chat.CharacterLoader;
 import com.craftingmod.maplechatbot.chat.ChatService;
 import com.craftingmod.maplechatbot.model.UserModel;

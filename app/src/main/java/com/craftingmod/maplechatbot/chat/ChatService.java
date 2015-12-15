@@ -18,6 +18,13 @@ import com.anprosit.android.promise.OnYieldListener;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.R;
+import com.craftingmod.maplechatbot.command.BaseCommand;
+import com.craftingmod.maplechatbot.command.BotState;
+import com.craftingmod.maplechatbot.command.Info;
+import com.craftingmod.maplechatbot.command.Lotto;
+import com.craftingmod.maplechatbot.command.Mail;
+import com.craftingmod.maplechatbot.command.Tracker;
+import com.craftingmod.maplechatbot.command.oClock;
 import com.craftingmod.maplechatbot.hooker.MessageHooker;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -48,9 +55,12 @@ public class ChatService extends Service {
     private TelegramBot bot;
     private Gson g;
     private HashMap<String,UserModel> users;
+    private HashMap<Integer,Long> lastSaid;
+
     private Boolean isInitBot = false;
     private HashMap<String,String> mails;
-    private HashMap<String,Long> connects;
+
+    private ArrayList<BaseCommand> commands;
 
     private int botID;
 
@@ -64,12 +74,7 @@ public class ChatService extends Service {
     public void onCreate() {
 
     }
-    private String message;
-    private Bundle getStrBundle(String msg){
-        Bundle bundle = new Bundle();
-        bundle.putString("data","#" + msg);
-        return bundle;
-    }
+    /*
     private String getCommandResult(String message){
         if(message.equalsIgnoreCase("!version")){
             return "0.1.0.alpha";
@@ -128,27 +133,10 @@ public class ChatService extends Service {
         }
         return null;
     }
+    */
+    private int i;
     private void onMessage(final UserModel user,final String msg){
-        final String username = user.userName;
-        message = msg;
-        Log.d("Maple-onMessage",msg +"\n"+ g.toJson(user));
-        if(botID == 0){
-            if(!message.equalsIgnoreCase("!initBot")){
-                bot.sendMessage(24987991,"봇 아이디를 설정해 주세요. !initBot");
-            }else{
-                botID = user.characterID;
-            }
-            return;
-        }else{
-            if(user.characterID == botID){
-                if(msg.startsWith("#")){
-                    return;
-                }else{
-                    Log.d("WBUS","컴온.");
-                }
-            }
-        }
-        Log.d("Maple-onMessage", botID + "" + user.characterID);
+
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... params) {
@@ -157,26 +145,24 @@ public class ChatService extends Service {
             }
         }.execute();
 
-        String str3 = getLastseen(msg);
-        if(str3 != null){
-            sendMessage(str3);
-            return;
-        }
-        connects.put(user.userName,System.nanoTime());
-
-        String str = getCommandResult(msg);
-        if(str != null){
-            sendMessage(str);
-            return;
-        }
-        String str2 = getMail(user.userName, msg);
-        if(str2 != null){
-            sendMessage(str2);
-            return;
-        }
-        if(msg.startsWith("!캐릭터사진")){
-            sendMessage(user.userImage);
-            return;
+        if(msg.startsWith("!")){
+            if(lastSaid.containsKey(user.accountID) && (System.nanoTime() - lastSaid.get(user.accountID))/1000000000 < 10){
+                return;
+            }else{
+                lastSaid.put(user.accountID,System.nanoTime());
+            }
+            for(int i=0;i<commands.size();i+=1){
+                commands.get(i).Receive(user,msg);
+            }
+        }else{
+            for(i=0;i<commands.size();i+=1){
+                Promise.with(this, null).then(new Task<Object, Object>() {
+                    @Override
+                    public void run(Object o, NextTask<Object> nextTask) {
+                        commands.get(i).onText(user,msg);
+                    }
+                }).create().execute(null);
+            }
         }
     }
     private String uaID;
@@ -225,10 +211,18 @@ public class ChatService extends Service {
         g =  new GsonBuilder().create();
         users = new HashMap<>();
         mails = new HashMap<>();
-        connects = new HashMap<>();
+
+        lastSaid = new HashMap<>();
+
+        commands = new ArrayList<>();
+        commands.add(new Info(this));
+        commands.add(new Lotto(this));
+        commands.add(new Mail(this));
+        commands.add(new Tracker(this));
+        commands.add(new BotState(this,this));
 
         bot = TelegramBotAdapter.build("168972296:AAFd11aFp30yFDPDxWnXGbP8x8mknSQL4UM");
-        new Timer().scheduleAtFixedRate(new MyTask(), 0, 10000);
+        new Timer().scheduleAtFixedRate(new oClock(this), 0, 10000);
 
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
@@ -250,50 +244,13 @@ public class ChatService extends Service {
         super.onDestroy();
         unregisterReceiver(rec);
     }
-    private void sendMessage(String msg){
-        Intent intent = new Intent("com.craftingmod.SEND_MSG");
-        intent.putExtra("msg","#" + msg);
-        sendBroadcast(intent);
-    }
-    private class MyTask extends TimerTask {
 
-        private int last_hour = 13;
-
-        public MyTask(){
-            last_hour = 13;
+    public void toggleSlient(){
+        for(int i=0;i<commands.size();i+=1){
+            commands.get(i).slient = !commands.get(i).slient;
         }
-        @Override
-        public void run() {
-            Calendar c = Calendar.getInstance();
-            if(c.get(Calendar.MINUTE) == 0){
-                if(last_hour != c.get(Calendar.HOUR)){
-                    sendMessage(c.get(Calendar.HOUR) + "시에요");
-                    last_hour = c.get(Calendar.HOUR);
-                }
-            }
-            //Native_sendFriendMessage("Bot.bot.bot");
-            /*
-            Promise.with(this,null).then(new Task<Object, List<Update>>() {
-                @Override
-                public void run(Object o, NextTask<List<Update>> nextTask) {
-                    try{
-                        GetUpdatesResponse updatesResponse = bot.getUpdates(0, 2000, 4000);
-                        nextTask.run(updatesResponse.updates());
-                    }catch (retrofit.RetrofitError e){
-                        nextTask.fail(null,e);
-                    }
-                }
-            }).then(new Task<List<Update>, Boolean>() {
-                @Override
-                public void run(List<Update> updates, NextTask<Boolean> nextTask) {
-                    Log.d("WBUS",updates.size() + "");
-                    return;
-                }
-            }).create().execute(null);
-            */
-        }
-
     }
+
     private class MyReceiver extends BroadcastReceiver {
 
         private ChatService service;
