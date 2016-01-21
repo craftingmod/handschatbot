@@ -9,6 +9,7 @@ import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
+import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -26,8 +27,8 @@ public class Mail extends BaseCommand {
 
     private HashMap<Integer,ArrayList<MailModel>> mails;
 
-    public Mail(Context ct) {
-        super(ct);
+    public Mail(ISender sd) {
+        super(sd);
         Type typeM = new TypeToken<ArrayList<MailModel>>(){}.getType();
         Type typeS = new TypeToken<HashMap<Integer,String>>(){}.getType();
         String data = this.getDataStr("mails");

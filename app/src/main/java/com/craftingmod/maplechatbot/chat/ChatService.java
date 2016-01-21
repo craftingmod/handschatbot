@@ -23,6 +23,9 @@ import com.craftingmod.maplechatbot.R;
 import com.craftingmod.maplechatbot.command.BaseCommand;
 import com.craftingmod.maplechatbot.command.Block;
 import com.craftingmod.maplechatbot.command.BotState;
+import com.craftingmod.maplechatbot.command.Cmath;
+import com.craftingmod.maplechatbot.command.Coin;
+import com.craftingmod.maplechatbot.command.Help;
 import com.craftingmod.maplechatbot.command.Lotto;
 import com.craftingmod.maplechatbot.command.Mail;
 import com.craftingmod.maplechatbot.command.Tracker;
@@ -48,7 +51,7 @@ import de.robv.android.xposed.XposedBridge;
 /**
  * Created by superuser on 15/12/12.
  */
-public class ChatService extends Service {
+public class ChatService extends Service implements ISender {
 
     private MyReceiver rec;
     private TelegramBot bot;
@@ -159,11 +162,9 @@ public class ChatService extends Service {
             //this.sendMessage("유저입니다",17282110);
             return;
         }
-        commands.get(0).Receive(chat, user, msg);
-        commands.get(1).Receive(chat, user, msg);
-        commands.get(2).Receive(chat, user, msg);
-        commands.get(3).Receive(chat, user, msg);
-        commands.get(4).Receive(chat, user, msg);
+        for(int k=0;k<commands.size();k+=1){
+            commands.get(k).Receive(chat, user, msg);
+        }
 
         //this.sendMessage("테스트",Config.MASTER_ACCOUNT_ID);
         /*
@@ -272,11 +273,14 @@ public class ChatService extends Service {
 
         commands = new ArrayList<>();
        // commands.add(new Info(this));
-       // commands.add(new Lotto(this));
+        commands.add(new Lotto(this));
         commands.add(new Mail(this));
         commands.add(new Tracker(this));
         commands.add(new BotState(this, this));
         commands.add(new UserInfo(this));
+        commands.add(new Coin(this));
+        commands.add(new Cmath(this));
+        commands.add(new Help(this));
         blocks = new Block(this);
         commands.add(blocks);
 
@@ -373,6 +377,12 @@ public class ChatService extends Service {
         }
         NativeSendMessage(new ChatModel(msg, allAIDi));
     }
+
+    @Override
+    public Context getContext() {
+        return this;
+    }
+
     public void sendMessage(String msg,int sender){
         NativeSendMessage(new ChatModel(msg,new int[]{sender}));
     }

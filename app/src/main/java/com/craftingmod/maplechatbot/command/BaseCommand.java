@@ -9,6 +9,7 @@ import org.apache.commons.codec.binary.Base64;
 import android.util.Log;
 
 import com.craftingmod.maplechatbot.Config;
+import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 import com.google.gson.Gson;
@@ -26,12 +27,14 @@ import java.util.HashMap;
 public abstract class BaseCommand {
     protected int i;
     protected Context context;
+    protected ISender api;
     protected SharedPreferences sp;
     protected Gson g;
     public boolean slient = false;
 
-    public BaseCommand(Context ct){
-        context = ct;
+    public BaseCommand(ISender sender){
+        context = sender.getContext();
+        api = sender;
         sp = context.getSharedPreferences("data",Context.MODE_PRIVATE);
         g = new GsonBuilder().create();
     }
@@ -83,13 +86,12 @@ public abstract class BaseCommand {
         this.Receive(emuChat,emuUser,"!" + cmd);
     }
     public void sendMessage(String msg,int sender){
-        NativeSendMessage(new ChatModel(msg, new int[]{sender}));
+        api.sendMessage(msg, sender);
+       // NativeSendMessage(new ChatModel(msg, new int[]{sender}));
     }
-    private void NativeSendMessage(ChatModel model){
-        Intent intent = new Intent(Config.SEND_MESSAGE);
-        intent.putExtra("data",g.toJson(model));
-        intent.putExtra("token",Config.ACCESS_BRAODCAST_TOKEN);
-        context.sendBroadcast(intent);
+    public void sendMessageAll(String msg){
+        api.sendMessageAll(msg);
+        // NativeSendMessage(new ChatModel(msg, new int[]{sender}));
     }
 
     protected String grap(ArrayList<String> ar,int start){

@@ -10,6 +10,7 @@ import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
+import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -26,8 +27,8 @@ public class Tracker extends BaseCommand {
 
     private HashMap<Integer,Long> connects;
 
-    public Tracker(Context ct) {
-        super(ct);
+    public Tracker(ISender sd) {
+        super(sd);
         Type type = new TypeToken<HashMap<Integer,Long>>(){}.getType();
         String data = this.getDataStr("recent");
         if(data != null){

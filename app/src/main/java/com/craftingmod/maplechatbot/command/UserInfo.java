@@ -10,6 +10,7 @@ import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
+import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 import com.google.common.base.Joiner;
@@ -21,8 +22,8 @@ import java.util.HashMap;
  * Created by superuser on 16/1/21.
  */
 public class UserInfo extends BaseCommand {
-    public UserInfo(Context ct) {
-        super(ct);
+    public UserInfo(ISender sd) {
+        super(sd);
     }
 
     @Override
@@ -61,15 +62,15 @@ public class UserInfo extends BaseCommand {
             @Override
             public void run(ArrayList<UserModel> userModels, NextTask<Void> nextTask) {
                 ArrayList<String> names = new ArrayList<>();
-                int cid = 0;
+                UserModel model = null;
                 for(int i=0;i<userModels.size();i+=1){
                     if(!userModels.get(i).userName.equalsIgnoreCase(name)){
                         names.add(userModels.get(i).userName);
                     }else{
-                        cid = userModels.get(i).characterID;
+                        model = userModels.get(i);
                     }
                 }
-                sendMessage("accountID: " + userModels.get(0).accountID +" characterID: " + cid +" / " + Joiner.on(" ").join(names),user.accountID);
+                sendMessage("accountID: " + userModels.get(0).accountID +" characterID: " + model.characterID +" / Image: "+ (model.userImage == null?"없음":model.userImage) + " / " + Joiner.on(" ").join(names),user.accountID);
             }
         }).setCallback(new Callback<Void>() {
             @Override

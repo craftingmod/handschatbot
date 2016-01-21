@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.support.annotation.Nullable;
 
+import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 
@@ -13,8 +14,8 @@ import java.util.ArrayList;
  * Created by superuser on 15/12/13.
  */
 public class Lotto extends BaseCommand {
-    public Lotto(Context ct) {
-        super(ct);
+    public Lotto(ISender sd) {
+        super(sd);
     }
 
     @Override

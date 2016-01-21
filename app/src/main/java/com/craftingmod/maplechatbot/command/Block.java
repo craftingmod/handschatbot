@@ -11,6 +11,7 @@ import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.Config;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
+import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -31,9 +32,8 @@ public class Block extends BaseCommand {
     private ArrayList<Integer> blockList;
     private Type typeI = new TypeToken<ArrayList<Integer>>(){}.getType();
 
-    public Block(Context ct) {
-        super(ct);
-        context = ct;
+    public Block(ISender sd) {
+        super(sd);
         String data = this.getDataStr("blocks");
         blockList = new ArrayList<>();
         if(data != null){

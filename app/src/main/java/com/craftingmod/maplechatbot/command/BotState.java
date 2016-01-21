@@ -6,6 +6,7 @@ import android.support.annotation.Nullable;
 
 import com.craftingmod.maplechatbot.Config;
 import com.craftingmod.maplechatbot.chat.ChatService;
+import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 
@@ -18,8 +19,8 @@ public class BotState extends BaseCommand {
 
     private ChatService sv;
     private long startTime;
-    public BotState(Context ct,ChatService svc) {
-        super(ct);
+    public BotState(ISender sd,ChatService svc) {
+        super(sd);
         sv = svc;
         startTime = System.currentTimeMillis();
     }
