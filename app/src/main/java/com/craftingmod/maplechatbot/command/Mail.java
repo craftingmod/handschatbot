@@ -9,87 +9,96 @@ import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
+import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by superuser on 15/12/13.
  */
 public class Mail extends BaseCommand {
 
-    private HashMap<Integer,Boolean> hasMail;
-    private ArrayList<MailModel> mails;
+    private HashMap<Integer,ArrayList<MailModel>> mails;
 
     public Mail(Context ct) {
         super(ct);
-        mails = new ArrayList<>();
-        hasMail = new HashMap<>();
+        Type typeM = new TypeToken<ArrayList<MailModel>>(){}.getType();
+        Type typeS = new TypeToken<HashMap<Integer,String>>(){}.getType();
+        String data = this.getDataStr("mails");
+        mails = new HashMap<>();
+        if(data != null){
+            HashMap<Integer,String> mapSave = g.fromJson(data,typeS);
+            for (Map.Entry<Integer, String> entry : mapSave.entrySet()){
+                mails.put(entry.getKey(), (ArrayList<MailModel>) g.fromJson(entry.getValue(),typeM));
+                //System.out.println(entry.getKey() + "/" + entry.getValue());
+            }
+        }
+    }
+    @Override
+    public void onSave() {
+        HashMap<Integer,String> mailSave = new HashMap<>();
+        Type typeM = new TypeToken<ArrayList<MailModel>>(){}.getType();
+        Type typeS = new TypeToken<HashMap<Integer,String>>(){}.getType();
+        for (Map.Entry<Integer, ArrayList<MailModel>> entry : mails.entrySet()){
+            mailSave.put(entry.getKey(), g.toJson(entry.getValue(), typeM));
+        }
+        this.saveData("mails", g.toJson(mailSave,typeS));
+    }
+    @Override
+    protected String[] filter(){
+        return new String[]{"mail","메일"};
+    }
+    @Override
+    protected void onEvent(ChatModel chat,UserModel user,String msg){
+        if(mails.containsKey(user.accountID) && mails.get(user.accountID).size() >= 1){
+            final ArrayList<MailModel> mMail = mails.get(user.accountID);
+            for(int i=0;i<mMail.size();i+=1){
+                final MailModel mail = mMail.get(i);
+                sendMessage(mail.sendNick + " > " + mail.message ,user.accountID);
+            }
+            mails.remove(user.accountID);
+        }
     }
 
     @Override
-    protected void onCommand(final UserModel user, final String cmdName, @Nullable final ArrayList<String> args) {
-        if(cmdName.equalsIgnoreCase("mail") || cmdName.equalsIgnoreCase("메일")){
-            if(args.size() >= 2){
-                final String sender = args.get(0);
-                final long aid = user.accountID;
-                Promise.with(this,Boolean.class)
-                        .then(new Task<Boolean, ArrayList<UserModel>>() {
-                            @Override
-                            public void run(Boolean aBoolean, NextTask<ArrayList<UserModel>> task) {
-                                new CharacterFinder(task).execute("name=\'" + sender + "\'");
-                            }
-                        }).then(new Task<ArrayList<UserModel>, Object>() {
-                    @Override
-                    public void run(ArrayList<UserModel> userModels, NextTask<Object> nextTask) {
-                        addMail(userModels.get(0).accountID,user,grap(args, 1));
-                    }
-                }).setCallback(new Callback<Object>() {
-                    @Override
-                    public void onSuccess(Object o) {}
-                    @Override
-                    public void onFailure(Bundle bundle, Exception e) {
-                        sendMessage("메일을 보내는데 실패하였습니다.");
-                    }
-                }).create().execute(true);
-            /*
-            if(!mails.containsKey(sender)){
-                HashMap<String,String> hash = new HashMap<>();
-                hash.put(user.userName,this.grap(args,1));
-                mails.put(sender,hash);
-            }else{
-                mails.get(sender).put(user.userName, this.grap(args, 1));
-            }
-            this.sendMessage("메일 저장 완료.");
-            */
-            }
+    protected void onCommand(final ChatModel chat,final UserModel user, final String cmdName, @Nullable final ArrayList<String> args) {
+        if(args.size() >= 2) {
+            final String sender = args.get(0);
+            Promise.with(this, String.class)
+                    .then(new Task<String, HashMap<String,String>>() {
+                        @Override
+                        public void run(String pm, NextTask<HashMap<String,String>> task) {
+                            HashMap<String,String> map = new HashMap<>();
+                            map.put("name",pm);
+                            task.run(map);
+                        }
+                    }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, Object>() {
+                @Override
+                public void run(ArrayList<UserModel> userModels, NextTask<Object> nextTask) {
+                    addMail(userModels.get(0).accountID, user, grap(args, 1));
+                    sendMessage(sender + "(" + userModels.get(0).accountID + ") 에게 메일을 보냈습니다.", chat.SenderAID);
+                }
+            }).setCallback(new Callback<Object>() {
+                @Override
+                public void onSuccess(Object o) {
+                }
+                @Override
+                public void onFailure(Bundle bundle, Exception e) {
+                    sendMessage("메일을 보내는데 실패하였습니다.",chat.SenderAID);
+                }
+            }).create().execute(sender);
         }
     }
     private void addMail(int aid,UserModel user,String msg){
-        hasMail.put(aid,true);
-        mails.add(new MailModel(user.userName,aid,msg));
-        sendMessage("AID " + aid + "로 메일을 보냈습니다.");
-    }
-    @Override
-    public void onText(UserModel user, String msg){
-        if(hasMail.get(user.accountID)){
-            hasMail.put(user.accountID,false);
-            StringBuilder sb = new StringBuilder();
-            sb.append("Mail => ");
-            for(i=0;i<mails.size();i+=1){
-                if(mails.get(i).receiveAccountID == user.accountID){
-                    sb.append(mails.get(i).sendNick).append(" : ").append(mails.get(i).message).append(" /  ");
-                    mails.remove(i);
-                }
-            }
-            sendMessage(sb.toString());
+        if(!mails.containsKey(aid)){
+            mails.put(aid,new ArrayList<MailModel>());
         }
-    }
-
-    @Override
-    protected void onExit() {
-        this.saveData("mails",g.toJson(mails));
+        mails.get(aid).add(new MailModel(user.userName, aid, msg));
     }
 }

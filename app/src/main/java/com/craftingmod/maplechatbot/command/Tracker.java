@@ -10,8 +10,12 @@ import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
+import com.craftingmod.maplechatbot.model.ChatModel;
+import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
+import com.google.gson.reflect.TypeToken;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -20,74 +24,68 @@ import java.util.HashMap;
  */
 public class Tracker extends BaseCommand {
 
-    private HashMap<String,Long> connects;
+    private HashMap<Integer,Long> connects;
 
     public Tracker(Context ct) {
         super(ct);
-        connects = new HashMap<>();
-    }
-
-    @Override
-    protected void onCommand(final UserModel um, String cmdName, @Nullable ArrayList<String> args) {
-        if(cmdName.equals("seen") || cmdName.equals("최근")){
-            if(args.size() >= 1){
-                final String user = args.get(0);
-                /*
-                Promise.with(this, Boolean.class)
-                        .then(new Task<Boolean, ArrayList<UserModel>>() {
-                            @Override
-                            public void run(Boolean aBoolean, NextTask<ArrayList<UserModel>> task) {
-                                new CharacterFinder(task).execute("name=\'" + user + "\'");
-                            }
-                        }).then(new Task<ArrayList<UserModel>, Object>() {
-                    @Override
-                    public void run(ArrayList<UserModel> userModels, NextTask<Object> nextTask) {
-                        Log.d("Maple",userModels.get(0).accountID + "");
-                        StringBuilder sb = new StringBuilder();
-                        sb.append(user).append("님은 ");
-                        if(connects.containsKey(userModels.get(0).accountID)){
-                            sb.append(getDeltaTime(connects.get(0)))
-                                    .append("전에 친구챗을 했어요.");
-                            sendMessage(sb.toString());
-                        }else{
-                            sb.append("최근 접속한 기록이 없어요. (!uptime 치시면 나오는 시간만큼)");
-                            sendMessage(sb.toString());
-                        }
-                    }
-                }).setCallback(new Callback<Object>() {
-                    @Override
-                    public void onSuccess(Object o) {
-
-                    }
-
-                    @Override
-                    public void onFailure(Bundle bundle, Exception e) {
-                        sendMessage("유저 조회를 실패했어요.");
-                    }
-                }).create().execute(true);
-                */
-                StringBuilder sb = new StringBuilder();
-                sb.append(user).append("님은 ");
-                if(connects.containsKey(user)){
-                    sb.append(getDeltaTime(connects.get(user)))
-                            .append("전에 친구챗을 했어요.");
-                    sendMessage(sb.toString());
-                }else{
-                    sb.append("최근 접속한 기록이 없어요. (!uptime 치시면 나오는 시간만큼)");
-                    sendMessage(sb.toString());
-                }
-            }
+        Type type = new TypeToken<HashMap<Integer,Long>>(){}.getType();
+        String data = this.getDataStr("recent");
+        if(data != null){
+            connects = g.fromJson(data,type);
+        }else{
+            connects = new HashMap<>();
         }
     }
     @Override
-    public void onText(UserModel user,String msg){
-        Log.d("Maple",(System.nanoTime()/1000000000)%3600+"");
-        Log.d("Maple",user.userName + "");
-        connects.put(user.userName,System.nanoTime());
+    protected String[] filter(){
+        return new String[]{"seen","최근"};
+    }
+    @Override
+    protected void onText(ChatModel chat,UserModel user,String msg){
+        connects.put(user.accountID, System.currentTimeMillis());
+    }
+    @Override
+    public void onSave(){
+        Type type = new TypeToken<HashMap<Integer,Long>>(){}.getType();
+        this.saveData("recent",g.toJson(connects,type));
     }
 
     @Override
-    protected void onExit() {
-
+    protected void onCommand(ChatModel chat, final UserModel user, String cmdName, @Nullable final ArrayList<String> args) {
+        if(args.size() == 0){
+            args.add(user.userName);
+        }
+        final String nick = args.get(0);
+        Promise.with(this, Boolean.class).then(new Task<Boolean, HashMap<String,String>>() {
+            @Override
+            public void run(Boolean aBoolean, NextTask<HashMap<String,String>> task) {
+                HashMap<String,String> map = new HashMap<>();
+                map.put("name",nick);
+                task.run(map);
+            }
+        }).then(new CharacterFinder())
+        .then(new Task<ArrayList<UserModel>, Integer>() {
+            @Override
+            public void run(ArrayList<UserModel> userModels, NextTask<Integer> nextTask) {
+                if (userModels.size() == 0) {
+                    nextTask.fail(null, null);
+                } else {
+                    nextTask.run(userModels.get(0).accountID);
+                }
+            }
+        }).setCallback(new Callback<Integer>() {
+            @Override
+            public void onSuccess(Integer pam) {
+                if (connects.containsKey(pam)) {
+                    sendMessage(nick + "님은 " + getDeltaTime(connects.get(pam)) + "전에 말하였어요.", user.accountID);
+                } else {
+                    this.onFailure(null, null);
+                }
+            }
+            @Override
+            public void onFailure(Bundle bundle, Exception e) {
+                sendMessage(nick + "님의 기록을 찾을 수 없어요.",user.accountID);
+            }
+        }).create().execute(true);
     }
 }

@@ -4,7 +4,9 @@ import android.app.Service;
 import android.content.Context;
 import android.support.annotation.Nullable;
 
+import com.craftingmod.maplechatbot.Config;
 import com.craftingmod.maplechatbot.chat.ChatService;
+import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 
 import java.util.ArrayList;
@@ -15,34 +17,39 @@ import java.util.ArrayList;
 public class BotState extends BaseCommand {
 
     private ChatService sv;
+    private long startTime;
     public BotState(Context ct,ChatService svc) {
         super(ct);
         sv = svc;
+        startTime = System.currentTimeMillis();
+    }
+    @Override
+    protected String[] filter(){
+        return new String[]{"uptime","version","shutdown","me","save"};
     }
 
     @Override
-    public void onText(UserModel user, String msg) {
-
-    }
-
-    @Override
-    protected void onCommand(UserModel user, String cmdName, @Nullable ArrayList<String> args) {
-        if(user.accountID == 5733475){
+    protected void onCommand(ChatModel chat,UserModel user, String cmdName, @Nullable ArrayList<String> args) {
+        if(user.accountID == Config.MASTER_ACCOUNT_ID){
             if(cmdName.equals("shutdown")){
-                sendMessage("Shutting down..");
+                sendMessage("Shutting down..",user.accountID);
                 sv.stopForeground(true);
                 sv.stopSelf();
                 sv.onDestroy();
             }
-            if(cmdName.equals("toggleOut")){
-                sendMessage("Toggled Output");
-                sv.toggleSlient();
+            if(cmdName.equals("save")){
+                sendMessage("saving...",user.accountID);
+                sv.save();
             }
         }
-    }
-
-    @Override
-    protected void onExit() {
-
+        if(cmdName.equals("version")){
+            sendMessage("1.1 (20160113)", user.accountID);
+        }
+        if(cmdName.equals("uptime")){
+            sendMessage(this.getDeltaTime(startTime),user.accountID);
+        }
+        if(cmdName.equals("me")){
+            sendMessage(user.userName + ": AID " + chat.SenderAID + " CID: " + user.characterID,user.accountID);
+        }
     }
 }

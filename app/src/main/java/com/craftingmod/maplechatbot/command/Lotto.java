@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.support.annotation.Nullable;
 
+import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 
 import java.util.ArrayList;
@@ -17,27 +18,22 @@ public class Lotto extends BaseCommand {
     }
 
     @Override
-    public void onText(UserModel user, String msg) {
-
+    protected String[] filter(){
+        return new String[]{"스타포스","starEnchant","주사위","dice"};
     }
 
     @Override
-    protected void onCommand(UserModel user, String cmdName, @Nullable ArrayList<String> args) {
+    protected void onCommand(ChatModel chat,UserModel user, String cmdName, @Nullable ArrayList<String> args) {
         if(cmdName.equals("스타포스") || cmdName.equals("starEnchant")){
             if(args.size() >= 2 && isInteger(args.get(0)) && isInteger(args.get(1))){
                 int start = Integer.parseInt(args.get(0));
                 int end = Integer.parseInt(args.get(1));
-                new StarForce().execute(start,end);
+                new StarForce().execute(start,end,user.accountID);
             }
         }
         if(cmdName.equals("주사위") || cmdName.equals("dice")){
-            sendMessage("" + (1 + Math.floor(Math.random() * 6)));
+            sendMessage("" + (1 + Math.floor(Math.random() * 6)),user.accountID);
         }
-    }
-
-    @Override
-    protected void onExit() {
-
     }
 
     private class StarForce extends AsyncTask<Integer,Void,Long[]> {
@@ -47,6 +43,8 @@ public class Lotto extends BaseCommand {
         private int boomed;
         private int falled;
         private int chance_fall;
+
+        private int accID;
 
         private int start;
 
@@ -73,6 +71,8 @@ public class Lotto extends BaseCommand {
             falled = 0;
             chance_fall = 0;
 
+            accID = params[2];
+
             while(enchant());
             return new Long[]{nowMoney,(long)falled,(long)boomed};
         }
@@ -90,7 +90,7 @@ public class Lotto extends BaseCommand {
             money.append(nowMoney).append("메소");
 
             sendMessage("스타포스 " + start + "강부터 " + destStar + "강까지 " + money.toString()
-                    +"가 들었고, 실패횟수는 " + falled + "번이며 터진횟수는 " + boomed + "번입니다.");
+                    +"가 들었고, 실패횟수는 " + falled + "번이며 터진횟수는 " + boomed + "번입니다.",accID);
             super.onPostExecute(result);
         }
         private boolean enchant(){

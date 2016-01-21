@@ -1,31 +1,32 @@
 package com.craftingmod.maplechatbot.chat;
 
-import android.app.Notification;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.os.Bundle;
+import android.os.Handler;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.res.TypedArrayUtils;
 import android.util.Log;
 
+import com.anprosit.android.promise.Callback;
 import com.anprosit.android.promise.NextTask;
-import com.anprosit.android.promise.OnYieldListener;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
+import com.craftingmod.maplechatbot.Config;
 import com.craftingmod.maplechatbot.R;
 import com.craftingmod.maplechatbot.command.BaseCommand;
+import com.craftingmod.maplechatbot.command.Block;
 import com.craftingmod.maplechatbot.command.BotState;
-import com.craftingmod.maplechatbot.command.Info;
 import com.craftingmod.maplechatbot.command.Lotto;
 import com.craftingmod.maplechatbot.command.Mail;
 import com.craftingmod.maplechatbot.command.Tracker;
-import com.craftingmod.maplechatbot.command.oClock;
-import com.craftingmod.maplechatbot.hooker.MessageHooker;
+import com.craftingmod.maplechatbot.command.UserInfo;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 import com.google.gson.Gson;
@@ -34,17 +35,15 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.TelegramBotAdapter;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
-import com.pengrad.telegrambot.response.GetUpdatesResponse;
 
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 /**
  * Created by superuser on 15/12/12.
@@ -55,12 +54,14 @@ public class ChatService extends Service {
     private TelegramBot bot;
     private Gson g;
     private HashMap<String,UserModel> users;
-    private HashMap<Integer,Long> lastSaid;
 
     private Boolean isInitBot = false;
-    private HashMap<String,String> mails;
+    private Block blocks;
 
     private ArrayList<BaseCommand> commands;
+
+    private ArrayList<Integer> allAIDs;
+    private int[] allAIDi;
 
     private int botID;
 
@@ -134,115 +135,252 @@ public class ChatService extends Service {
         return null;
     }
     */
-    private int i;
-    private void onMessage(final UserModel user,final String msg){
-
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                bot.sendMessage(24987991,"#" + user.userName + " : " + msg);
-                return null;
-            }
-        }.execute();
-
-        if(msg.startsWith("!")){
-            if(lastSaid.containsKey(user.accountID) && (System.nanoTime() - lastSaid.get(user.accountID))/1000000000 < 10){
-                return;
-            }else{
-                lastSaid.put(user.accountID,System.nanoTime());
-            }
-            for(int i=0;i<commands.size();i+=1){
-                commands.get(i).Receive(user,msg);
-            }
-        }else{
-            for(i=0;i<commands.size();i+=1){
-                Promise.with(this, null).then(new Task<Object, Object>() {
-                    @Override
-                    public void run(Object o, NextTask<Object> nextTask) {
-                        commands.get(i).onText(user,msg);
-                    }
-                }).create().execute(null);
-            }
-        }
+    private void sendTelegram(String msg){
+        Intent intent = new Intent(Config.TELEGRAM_MESSAGE);
+        intent.putExtra("token", Config.ACCESS_BRAODCAST_TOKEN);
+        intent.putExtra("data", msg);
+        sendBroadcast(intent);
     }
-    private String uaID;
-    public void onReceive(Intent intent) {
-        if(intent.getAction().equals("com.craftingmod.INITED_BOT")){
+    private void onMessage(final ChatModel chat,final UserModel user,final String msg){
+        Log.d("Maple", "called onMessage: " + g.toJson(chat) + " / " + g.toJson(user));
 
-        }else if(intent.hasExtra("data")){
-            final ChatModel ch =  g.fromJson(intent.getStringExtra("data"), ChatModel.class);
-            Log.d("Maple","messaged received: " + intent.getStringExtra("data"));
-            Promise.with(this,Boolean.class).then(new Task<Boolean, UserModel>() {
+        new Handler().post(new Runnable() {
+            @Override
+            public void run() {
+                sendTelegram("#" + user.userName + " : " + msg);
+            }
+        });
+
+        if(chat.SenderCID == Config.CHARACTER_BOT_ID){
+            return;
+        }
+        // "SenderAID":17282110,"SenderCID":75623432
+        if(blocks.isBlocked(user.accountID) && msg.startsWith("!")){
+            //this.sendMessage("유저입니다",17282110);
+            return;
+        }
+        commands.get(0).Receive(chat, user, msg);
+        commands.get(1).Receive(chat, user, msg);
+        commands.get(2).Receive(chat, user, msg);
+        commands.get(3).Receive(chat, user, msg);
+        commands.get(4).Receive(chat, user, msg);
+
+        //this.sendMessage("테스트",Config.MASTER_ACCOUNT_ID);
+        /*
+        for(int i=0;i<commands.size();i+=1){
+            commands.get(i).Receive(chat,user,msg);
+        }
+        */
+    }
+    public void onReceive(Intent intent) {
+        final ChatModel ch =  g.fromJson(intent.getStringExtra("data"), ChatModel.class);
+        Log.d("Maple", "messaged received: " + ch.SenderCID + " : " + ch.Msg);
+        final String uaID = ch.SenderAID + "/" + ch.SenderCID;
+        if(users.containsKey(uaID) && users.get(uaID).lastTimestamp >= (System.currentTimeMillis()/1000)-7200){
+            onMessage(ch,users.get(uaID),ch.Msg);
+        }else{
+            Promise.with(this,Boolean.class).then(new Task<Boolean, HashMap<String,String>>() {
                 @Override
-                public void run(Boolean aBoolean, NextTask<UserModel> task) {
-                    uaID = ch.SenderAID + "/" + ch.SenderCID;
-                    if(users.containsKey(uaID)){
-                        if(users.get(uaID).lastTimestamp >= (System.nanoTime()/1000000000)-7200){
-                            Log.d("Maple",g.toJson(users.get(uaID)));
-                            task.run(users.get(uaID));
-                            //return;
-                        }else{
-                            users.remove(uaID);
-                            CharacterLoader cl = new CharacterLoader(task);
-                            cl.execute(new UserModel(ch.SenderAID, ch.SenderCID, null));
-                        }
+                public void run(Boolean aBoolean, NextTask<HashMap<String, String>> nextTask) {
+                    nextTask.run(CharacterFinder.getSearch(ch.SenderAID,ch.SenderCID));
+                }
+            }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, Void>() {
+                @Override
+                public void run(ArrayList<UserModel> userModels, NextTask<Void> nextTask) {
+                    if(userModels.size() != 1){
+                        XposedBridge.log("Error: No User found.");
                     }else{
-                        CharacterLoader cl = new CharacterLoader(task);
-                        cl.execute(new UserModel(ch.SenderAID, ch.SenderCID, null));
+                        UserModel model = userModels.get(0);
+                        model.lastTimestamp = System.currentTimeMillis()/1000;
+                        users.put(uaID,model);
+                        onMessage(ch,model,ch.Msg);
                     }
                 }
-            }).then(new Task<UserModel, Boolean>() {
+            }).setCallback(new Callback<Void>() {
                 @Override
-                public void run(UserModel userModel, NextTask<Boolean> nextTask) {
-                    Log.d("Maple","called onMessage");
-                    if(!users.containsKey(uaID)){
-                        // 0 is 9..
-                        userModel.lastTimestamp = System.nanoTime()/1000000000;
-                        users.put(uaID,userModel);
-                    }
-                    onMessage(userModel,ch.Msg);
+                public void onSuccess(Void aVoid) {
+
+                }
+                @Override
+                public void onFailure(Bundle bundle, Exception e) {
+                    if(e != null) e.printStackTrace();
                 }
             }).create().execute(true);
         }
     }
+    private int lastMessageID = 0;
+    public void onTelegramMessage(List<Update> updates){
+        for(int i=0;i<updates.size();i+=1){
+            Message message = updates.get(i).message();
+            if(!message.text().startsWith("/")){
+                sendMessageAll(message.text());
+                Log.d("MapleReceived",message.text());
+            }else{
+                for(int j=0;j<commands.size();j+=1){
+                    commands.get(j).callTelegram(message.text().substring(1));
+                }
+            }
+            lastMessageID = updates.get(i).updateId() + 1;
+        }
+    }
 
+    /**
+     * update speakers
+     */
+    public void updateSpeak(){
+        allAIDs = new ArrayList<>();
+        Promise.with(this,Boolean.class).then(new Task<Boolean, HashMap<String,String>>() {
+            @Override
+            public void run(Boolean bk, NextTask<HashMap<String, String>> nextTask) {
+                HashMap<String,String> map = new HashMap<>();
+                map.put("wid",Config.WORLD_BOT_ID + "");
+                nextTask.run(map);
+            }
+        }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, ArrayList<Integer>>() {
+            @Override
+            public void run(ArrayList<UserModel> userModels, NextTask<ArrayList<Integer>> nextTask) {
+                ArrayList<Integer> list = new ArrayList<>();
+                int data;
+                for(int i=0;i<userModels.size();i+=1){
+                    data = userModels.get(i).accountID;
+                    if(!list.contains(data)){
+                        list.add(data);
+                    }
+                }
+                allAIDs = list;
+                nextTask.run(list);
+            }
+        }).setCallback(new Callback<ArrayList<Integer>>() {
+            @Override
+            public void onSuccess(ArrayList<Integer> integers) {
+            }
+            @Override
+            public void onFailure(Bundle bundle, Exception e) {
+                if(e != null){
+                    e.printStackTrace();
+                }
+            }
+        }).create().execute(true);
+    }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         g =  new GsonBuilder().create();
         users = new HashMap<>();
-        mails = new HashMap<>();
 
-        lastSaid = new HashMap<>();
+        final int BOT_UPDATE_TIME = 500; // millisecond
+        final int AUTO_SAVE_TIME = 60*10; // sec
 
         commands = new ArrayList<>();
-        commands.add(new Info(this));
-        commands.add(new Lotto(this));
+       // commands.add(new Info(this));
+       // commands.add(new Lotto(this));
         commands.add(new Mail(this));
         commands.add(new Tracker(this));
-        commands.add(new BotState(this,this));
+        commands.add(new BotState(this, this));
+        commands.add(new UserInfo(this));
+        blocks = new Block(this);
+        commands.add(blocks);
 
-        bot = TelegramBotAdapter.build("168972296:AAFd11aFp30yFDPDxWnXGbP8x8mknSQL4UM");
-        new Timer().scheduleAtFixedRate(new oClock(this), 0, 10000);
+        /**
+         * Add Receiver
+         */
+        rec = new MyReceiver(this);
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(Config.BROADCAST_MESSAGE);
+        registerReceiver(rec, intentFilter);
 
+        /**
+         * Add telegram receiver
+         */
+        bot = TelegramBotAdapter.build(Config.TELEGRAM_BOT_TOKEN);
+        final Handler handler = new Handler();
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        new AsyncTask<Void, Void, Void>() {
+                            @Override
+                            protected Void doInBackground(Void... params) {
+                                List<Update> updates;
+                                try {
+                                    if (lastMessageID == 0) {
+                                        updates = bot.getUpdates(null, 20, 1000).updates();
+                                    } else {
+                                        updates = bot.getUpdates(lastMessageID, 20, 1000).updates();
+                                    }
+                                    if(updates.size() >= 1){
+                                        onTelegramMessage(updates);
+                                    }
+                                } catch (Exception e2) {
+                                    e2.printStackTrace();
+                                }
+                                return null;
+                            }
+                        }.execute();
+                    }
+                });
+            }
+        }, 0, BOT_UPDATE_TIME);
+
+        /**
+         * Auto save function
+         */
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                save();
+            }
+        },0,1000*AUTO_SAVE_TIME);
+
+        /**
+         * Foreground notification
+         */
         NotificationCompat.Builder mBuilder =
                 new NotificationCompat.Builder(this)
                         .setSmallIcon(R.drawable.ic)
-                        .setContentTitle("My notification")
-                        .setContentText("Hello World!");
-        startForeground(5371,mBuilder.build());
-        rec = new MyReceiver(this);
-
-        IntentFilter i_f = new IntentFilter();
-        i_f.addAction("com.craftingmod.INITED_BOT");
-        i_f.addAction("com.craftingmod.MESSAGE_FRIEND");
-        registerReceiver(rec, i_f);
+                        .setContentTitle("Chatbot Service.")
+                        .setContentText("It is running!");
+        startForeground(5371, mBuilder.build());
+        /**
+         * Update all aids for hands
+         */
+        updateSpeak();
 
         return START_STICKY;
     }
     @Override
     public void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(rec);
+        try{
+            unregisterReceiver(rec);
+        }catch (IllegalArgumentException e){
+            e.printStackTrace();
+        }
+    }
+    public void save(){
+        for(int i=0;i<commands.size();i+=1){
+            commands.get(i).onSave();
+        }
+    }
+    public void sendMessageAll(String msg){
+        if(allAIDi == null || allAIDi.length != allAIDs.size()){
+            allAIDi = new int[allAIDs.size()];
+            for (int i=0; i < allAIDs.size(); i+=1){
+                allAIDi[i] = allAIDs.get(i);
+            }
+        }
+        NativeSendMessage(new ChatModel(msg, allAIDi));
+    }
+    public void sendMessage(String msg,int sender){
+        NativeSendMessage(new ChatModel(msg,new int[]{sender}));
+    }
+    private void NativeSendMessage(ChatModel model){
+        Intent intent = new Intent(Config.SEND_MESSAGE);
+        intent.putExtra("data",g.toJson(model));
+        intent.putExtra("token",Config.ACCESS_BRAODCAST_TOKEN);
+        this.sendBroadcast(intent);
     }
 
     public void toggleSlient(){
