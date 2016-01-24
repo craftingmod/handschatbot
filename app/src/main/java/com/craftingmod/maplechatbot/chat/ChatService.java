@@ -180,12 +180,12 @@ public class ChatService extends Service implements ISender {
         if(users.containsKey(uaID) && users.get(uaID).lastTimestamp >= (System.currentTimeMillis()/1000)-7200){
             onMessage(ch,users.get(uaID),ch.Msg);
         }else{
-            Promise.with(this,Boolean.class).then(new Task<Boolean, HashMap<String,String>>() {
+            Promise.with(this,Boolean.class).then(new Task<Boolean, HashMap<Integer,String>>() {
                 @Override
-                public void run(Boolean aBoolean, NextTask<HashMap<String, String>> nextTask) {
+                public void run(Boolean aBoolean, NextTask<HashMap<Integer, String>> nextTask) {
                     nextTask.run(CharacterFinder.getSearch(ch.SenderAID,ch.SenderCID));
                 }
-            }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, Void>() {
+            }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, Void>() {
                 @Override
                 public void run(ArrayList<UserModel> userModels, NextTask<Void> nextTask) {
                     if(userModels.size() != 1){
@@ -202,9 +202,10 @@ public class ChatService extends Service implements ISender {
                 public void onSuccess(Void aVoid) {
 
                 }
+
                 @Override
                 public void onFailure(Bundle bundle, Exception e) {
-                    if(e != null) e.printStackTrace();
+                    if (e != null) e.printStackTrace();
                 }
             }).create().execute(true);
         }
@@ -214,7 +215,7 @@ public class ChatService extends Service implements ISender {
         for(int i=0;i<updates.size();i+=1){
             Message message = updates.get(i).message();
             if(!message.text().startsWith("/")){
-                sendMessageAll(message.text());
+                sendMessageSpeak(message.text());
                 Log.d("MapleReceived",message.text());
             }else{
                 for(int j=0;j<commands.size();j+=1){
@@ -230,14 +231,14 @@ public class ChatService extends Service implements ISender {
      */
     public void updateSpeak(){
         allAIDs = new ArrayList<>();
-        Promise.with(this,Boolean.class).then(new Task<Boolean, HashMap<String,String>>() {
+        Promise.with(this,Boolean.class).then(new Task<Boolean, HashMap<Integer,String>>() {
             @Override
-            public void run(Boolean bk, NextTask<HashMap<String, String>> nextTask) {
-                HashMap<String,String> map = new HashMap<>();
-                map.put("wid",Config.WORLD_BOT_ID + "");
+                public void run(Boolean bk, NextTask<HashMap<Integer, String>> nextTask) {
+                HashMap<Integer,String> map = new HashMap<>();
+                map.put(CharacterFinder.ALL,"");
                 nextTask.run(map);
             }
-        }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, ArrayList<Integer>>() {
+        }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, ArrayList<Integer>>() {
             @Override
             public void run(ArrayList<UserModel> userModels, NextTask<ArrayList<Integer>> nextTask) {
                 ArrayList<Integer> list = new ArrayList<>();
@@ -255,9 +256,10 @@ public class ChatService extends Service implements ISender {
             @Override
             public void onSuccess(ArrayList<Integer> integers) {
             }
+
             @Override
             public void onFailure(Bundle bundle, Exception e) {
-                if(e != null){
+                if (e != null) {
                     e.printStackTrace();
                 }
             }
@@ -268,7 +270,7 @@ public class ChatService extends Service implements ISender {
         g =  new GsonBuilder().create();
         users = new HashMap<>();
 
-        final int BOT_UPDATE_TIME = 500; // millisecond
+        final int BOT_UPDATE_TIME = 2000; // millisecond
         final int AUTO_SAVE_TIME = 60*10; // sec
 
         commands = new ArrayList<>();
@@ -368,13 +370,23 @@ public class ChatService extends Service implements ISender {
             commands.get(i).onSave();
         }
     }
-    public void sendMessageAll(String msg){
+    public void sendMessageSpeak(String msg){
+        syncAllID();
+        ChatModel cm = Config.CHAT_HANDS;
+        cm.FriendAids = allAIDi;
+        cm.Msg = msg;
+        NativeSendMessage(cm);
+    }
+    private void syncAllID(){
         if(allAIDi == null || allAIDi.length != allAIDs.size()){
             allAIDi = new int[allAIDs.size()];
             for (int i=0; i < allAIDs.size(); i+=1){
                 allAIDi[i] = allAIDs.get(i);
             }
         }
+    }
+    public void sendMessageAll(String msg){
+        syncAllID();
         NativeSendMessage(new ChatModel(msg, allAIDi));
     }
 

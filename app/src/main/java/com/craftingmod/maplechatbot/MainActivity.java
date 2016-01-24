@@ -86,18 +86,16 @@ public class MainActivity extends AppCompatActivity {
     }
     private void testDB(){
         Promise.with(this,Integer.class)
-                .then(new Task<Integer, HashMap<String,String>>() {
+                .then(new Task<Integer, HashMap<Integer,String>>() {
                     @Override
-                    public void run(Integer integer, NextTask<HashMap<String,String>> task) {
+                    public void run(Integer integer, NextTask<HashMap<Integer,String>> task) {
                         Log.d("WBUS", "Hello!");
-                        HashMap<String,String> param = new HashMap<String, String>();
-                        param.put("aid","94141462");
-                        param.put("cid","83364669");
-                        task.run(param);
+
+                        task.run(CharacterFinder.getSearch(94141462,83364669));
                         //cl.handle(msg);
                     }
                 })
-                .then(new CharacterFinder())
+                .then(CharacterFinder.getInstance())
                 .setCallback(new Callback<ArrayList<UserModel>>() {
                     @Override
                     public void onSuccess(ArrayList<UserModel> userModels) {

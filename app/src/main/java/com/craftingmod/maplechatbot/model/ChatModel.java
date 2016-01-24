@@ -24,4 +24,7 @@ public class ChatModel {
         this(-1,-1,-1,-1,-1,-1,Message);
         this.FriendAids = Friends;
     }
+    public ChatModel clone(){
+        return new ChatModel(Roomkey,RegisterDate,AID,SenderAID,SenderCID,WID,Msg);
+    }
 }

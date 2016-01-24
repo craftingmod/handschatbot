@@ -72,14 +72,14 @@ public class Mail extends BaseCommand {
         if(args.size() >= 2) {
             final String sender = args.get(0);
             Promise.with(this, String.class)
-                    .then(new Task<String, HashMap<String,String>>() {
+                    .then(new Task<String, HashMap<Integer,String>>() {
                         @Override
-                        public void run(String pm, NextTask<HashMap<String,String>> task) {
-                            HashMap<String,String> map = new HashMap<>();
-                            map.put("name",pm);
+                        public void run(String pm, NextTask<HashMap<Integer,String>> task) {
+                            HashMap<Integer,String> map = new HashMap<>();
+                            map.put(CharacterFinder.NICKNAME,pm);
                             task.run(map);
                         }
-                    }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, Object>() {
+                    }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, Object>() {
                 @Override
                 public void run(ArrayList<UserModel> userModels, NextTask<Object> nextTask) {
                     addMail(userModels.get(0).accountID, user, grap(args, 1));
@@ -89,9 +89,10 @@ public class Mail extends BaseCommand {
                 @Override
                 public void onSuccess(Object o) {
                 }
+
                 @Override
                 public void onFailure(Bundle bundle, Exception e) {
-                    sendMessage("메일을 보내는데 실패하였습니다.",chat.SenderAID);
+                    sendMessage("메일을 보내는데 실패하였습니다.", chat.SenderAID);
                 }
             }).create().execute(sender);
         }

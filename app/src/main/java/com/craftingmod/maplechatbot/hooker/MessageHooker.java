@@ -161,7 +161,9 @@ public class MessageHooker extends BaseMapleHooker {
 
             final ChatModel chatmodel = g.fromJson(intent.getStringExtra("data"),ChatModel.class);
             chatmodel.SenderAID = myAID;
-            chatmodel.SenderCID = Config.CHARACTER_BOT_ID;
+            if(chatmodel.SenderCID < 10){
+                chatmodel.SenderCID = Config.CHARACTER_BOT_ID;
+            }
             chatmodel.AID = myAID;
             chatmodel.WID = Config.WORLD_BOT_ID;
 

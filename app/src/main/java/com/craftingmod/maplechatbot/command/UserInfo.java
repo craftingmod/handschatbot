@@ -39,38 +39,36 @@ public class UserInfo extends BaseCommand {
         }
         final String name = args.get(0);
         Promise.with(this,String.class)
-                .then(new Task<String, HashMap<String,String>>() {
+                .then(new Task<String, HashMap<Integer,String>>() {
                     @Override
-                    public void run(String s, NextTask<HashMap<String, String>> nextTask) {
+                    public void run(String s, NextTask<HashMap<Integer, String>> nextTask) {
                         Log.d("Maple", s);
-                        final HashMap<String,String> key = new HashMap<>();
-                        key.put("name",s);
-                        nextTask.run(key);
+                        nextTask.run(CharacterFinder.getSearch(s));
                     }
-                }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, HashMap<String, String>>() {
+                }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, HashMap<Integer, String>>() {
             @Override
-            public void run(ArrayList<UserModel> userModels, NextTask<HashMap<String, String>> nextTask) {
+            public void run(ArrayList<UserModel> userModels, NextTask<HashMap<Integer, String>> nextTask) {
                 if (userModels.size() != 1) {
                     sendMessage(name + "를 찾을수 없습니다.", user.accountID);
                 } else {
-                    final HashMap<String, String> key = new HashMap<>();
-                    key.put("aid", userModels.get(0).accountID + "");
+                    final HashMap<Integer, String> key = new HashMap<>();
+                    key.put(CharacterFinder.ACCOUNT_ID, userModels.get(0).accountID + "");
                     nextTask.run(key);
                 }
             }
-        }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, Void>() {
+        }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, Void>() {
             @Override
             public void run(ArrayList<UserModel> userModels, NextTask<Void> nextTask) {
                 ArrayList<String> names = new ArrayList<>();
                 UserModel model = null;
-                for(int i=0;i<userModels.size();i+=1){
-                    if(!userModels.get(i).userName.equalsIgnoreCase(name)){
+                for (int i = 0; i < userModels.size(); i += 1) {
+                    if (!userModels.get(i).userName.equalsIgnoreCase(name)) {
                         names.add(userModels.get(i).userName);
-                    }else{
+                    } else {
                         model = userModels.get(i);
                     }
                 }
-                sendMessage("accountID: " + userModels.get(0).accountID +" characterID: " + model.characterID +" / Image: "+ (model.userImage == null?"없음":model.userImage) + " / " + Joiner.on(" ").join(names),user.accountID);
+                sendMessage("accountID: " + userModels.get(0).accountID + " characterID: " + model.characterID + " / Image: " + (model.userImage == null ? "없음" : model.userImage) + " / " + Joiner.on(" ").join(names), user.accountID);
             }
         }).setCallback(new Callback<Void>() {
             @Override

@@ -1,5 +1,7 @@
 package com.craftingmod.maplechatbot;
 
+import com.craftingmod.maplechatbot.model.ChatModel;
+
 /**
  * Created by superuser on 15/12/15.
  */
@@ -11,10 +13,12 @@ public class Config {
     public static final String SEND_MESSAGE = "com.craftingmod.sendMessage";
     public static final String TELEGRAM_MESSAGE = "com.craftingmod.telegramMessage";
     public static final String DATABASE_PATH = "/data/data/com.Nexon.MonsterLifeChat/databases/maplehands.db";
-    public static final int CHARACTER_BOT_ID = 86529332;
+    public static final int CHARACTER_BOT_ID = 88778583;
     public static final int MASTER_ACCOUNT_ID = 5733475;
     public static final int WORLD_BOT_ID = 3;
 
+    //long roomKey, long rDate, int AID, int SenderAID, int SenderCID, int WorldID, String Message
+    public static final ChatModel CHAT_HANDS = new ChatModel(0,0,MASTER_ACCOUNT_ID,MASTER_ACCOUNT_ID,83396524,WORLD_BOT_ID,"");
     public static final int TELEGRAM_EMU_USERID = -5;
-    public static final String TELEGRAM_EMU_USERNAME = "벨붕";
+    public static final String TELEGRAM_EMU_USERNAME = "채팅Bot";
 }

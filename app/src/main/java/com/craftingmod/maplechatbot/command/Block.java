@@ -53,14 +53,14 @@ public class Block extends BaseCommand {
     protected void onCommand(final ChatModel chat, final UserModel user,final String cmdName, @Nullable ArrayList<String> args) {
         if(args.size() == 1 && user.accountID == Config.MASTER_ACCOUNT_ID){
             Promise.with(this,String.class)
-                    .then(new Task<String, HashMap<String,String>>() {
+                    .then(new Task<String, HashMap<Integer,String>>() {
                         @Override
-                        public void run(String s, NextTask<HashMap<String, String>> nextTask) {
-                            HashMap<String,String> map = new HashMap<>();
-                            map.put("name",s);
+                        public void run(String s, NextTask<HashMap<Integer, String>> nextTask) {
+                            HashMap<Integer,String> map = new HashMap<>();
+                            map.put(CharacterFinder.NICKNAME,s);
                             nextTask.run(map);
                         }
-                    }).then(new CharacterFinder()).then(new Task<ArrayList<UserModel>, Integer>() {
+                    }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, Integer>() {
                 @Override
                 public void run(ArrayList<UserModel> userModels, NextTask<Integer> nextTask) {
                     final int aid = userModels.get(0).accountID;

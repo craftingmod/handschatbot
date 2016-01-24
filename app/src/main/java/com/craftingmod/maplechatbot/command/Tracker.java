@@ -57,14 +57,14 @@ public class Tracker extends BaseCommand {
             args.add(user.userName);
         }
         final String nick = args.get(0);
-        Promise.with(this, Boolean.class).then(new Task<Boolean, HashMap<String,String>>() {
+        Promise.with(this, Boolean.class).then(new Task<Boolean, HashMap<Integer,String>>() {
             @Override
-            public void run(Boolean aBoolean, NextTask<HashMap<String,String>> task) {
-                HashMap<String,String> map = new HashMap<>();
-                map.put("name",nick);
+            public void run(Boolean aBoolean, NextTask<HashMap<Integer,String>> task) {
+                HashMap<Integer,String> map = new HashMap<>();
+                map.put(CharacterFinder.NICKNAME,nick);
                 task.run(map);
             }
-        }).then(new CharacterFinder())
+        }).then(CharacterFinder.getInstance())
         .then(new Task<ArrayList<UserModel>, Integer>() {
             @Override
             public void run(ArrayList<UserModel> userModels, NextTask<Integer> nextTask) {
@@ -83,9 +83,10 @@ public class Tracker extends BaseCommand {
                     this.onFailure(null, null);
                 }
             }
+
             @Override
             public void onFailure(Bundle bundle, Exception e) {
-                sendMessage(nick + "님의 기록을 찾을 수 없어요.",user.accountID);
+                sendMessage(nick + "님의 기록을 찾을 수 없어요.", user.accountID);
             }
         }).create().execute(true);
     }
