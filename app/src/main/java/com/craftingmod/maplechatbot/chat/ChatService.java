@@ -19,18 +19,22 @@ import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.Config;
+import com.craftingmod.maplechatbot.MapleUtil;
 import com.craftingmod.maplechatbot.R;
 import com.craftingmod.maplechatbot.command.BaseCommand;
 import com.craftingmod.maplechatbot.command.Block;
 import com.craftingmod.maplechatbot.command.BotState;
 import com.craftingmod.maplechatbot.command.Cmath;
 import com.craftingmod.maplechatbot.command.Coin;
+import com.craftingmod.maplechatbot.command.FriendList;
 import com.craftingmod.maplechatbot.command.Help;
+import com.craftingmod.maplechatbot.command.Info;
 import com.craftingmod.maplechatbot.command.Lotto;
 import com.craftingmod.maplechatbot.command.Mail;
 import com.craftingmod.maplechatbot.command.Tracker;
 import com.craftingmod.maplechatbot.command.UserInfo;
 import com.craftingmod.maplechatbot.model.ChatModel;
+import com.craftingmod.maplechatbot.model.FriendModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -150,7 +154,7 @@ public class ChatService extends Service implements ISender {
         new Handler().post(new Runnable() {
             @Override
             public void run() {
-                sendTelegram("#" + user.userName + " : " + msg);
+               // sendTelegram("#" + user.userName + " : " + msg);
             }
         });
 
@@ -231,30 +235,29 @@ public class ChatService extends Service implements ISender {
      */
     public void updateSpeak(){
         allAIDs = new ArrayList<>();
-        Promise.with(this,Boolean.class).then(new Task<Boolean, HashMap<Integer,String>>() {
+        Promise.with(this, Boolean.class).then(new Task<Boolean, ArrayList<FriendModel>>() {
             @Override
-                public void run(Boolean bk, NextTask<HashMap<Integer, String>> nextTask) {
-                HashMap<Integer,String> map = new HashMap<>();
-                map.put(CharacterFinder.ALL,"");
-                nextTask.run(map);
+            public void run(Boolean aBoolean, NextTask<ArrayList<FriendModel>> nextTask) {
+                MapleUtil.getInstance().getAccountFriendList(Config.MASTER_ACCOUNT_ID,nextTask);
             }
-        }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, ArrayList<Integer>>() {
+        }).then(new Task<ArrayList<FriendModel>, Void>() {
             @Override
-            public void run(ArrayList<UserModel> userModels, NextTask<ArrayList<Integer>> nextTask) {
+            public void run(ArrayList<FriendModel> friendModels, NextTask<Void> nextTask) {
                 ArrayList<Integer> list = new ArrayList<>();
                 int data;
-                for(int i=0;i<userModels.size();i+=1){
-                    data = userModels.get(i).accountID;
+                for(int i=0;i<friendModels.size();i+=1){
+                    data = friendModels.get(i).accountID;
                     if(!list.contains(data)){
                         list.add(data);
                     }
                 }
                 allAIDs = list;
-                nextTask.run(list);
+                nextTask.run(null);
             }
-        }).setCallback(new Callback<ArrayList<Integer>>() {
+        }).setCallback(new Callback<Void>() {
             @Override
-            public void onSuccess(ArrayList<Integer> integers) {
+            public void onSuccess(Void aVoid) {
+
             }
 
             @Override
@@ -283,6 +286,8 @@ public class ChatService extends Service implements ISender {
         commands.add(new Coin(this));
         commands.add(new Cmath(this));
         commands.add(new Help(this));
+        commands.add(new Info(this));
+        commands.add(new FriendList(this));
         blocks = new Block(this);
         commands.add(blocks);
 
@@ -316,7 +321,7 @@ public class ChatService extends Service implements ISender {
                                     } else {
                                         updates = bot.getUpdates(lastMessageID, 20, 1000).updates();
                                     }
-                                    if(updates.size() >= 1){
+                                    if (updates.size() >= 1) {
                                         onTelegramMessage(updates);
                                     }
                                 } catch (Exception e2) {

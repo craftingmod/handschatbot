@@ -2,6 +2,7 @@ package com.craftingmod.maplechatbot.command;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.content.SharedPreferences;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
@@ -54,31 +55,36 @@ public abstract class BaseCommand {
         edit.putString(key,encoded);
         edit.apply();
     }
-    public void Receive(ChatModel chat,UserModel user,String fullString){
-        if(fullString.startsWith("!")){
-            String[] str = fullString.split("\\s+");
-            String cmd = str[0].substring(1);
-            String[] filters = filter();
-            for(i=0;i<filters.length;i+=1){
-                if(filters[i].equalsIgnoreCase("\\*") || filters[i].equalsIgnoreCase(cmd)){
-                    ArrayList<String> args = new ArrayList<>();
-                    if(str.length >= 2) {
-                        for(i=1;i<str.length;i+=1){
-                            args.add(str[i]);
+    public void Receive(final ChatModel chat,final UserModel user,final String fullString){
+        new Handler(context.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                if(fullString.startsWith("!")){
+                    String[] str = fullString.split("\\s+");
+                    String cmd = str[0].substring(1);
+                    String[] filters = filter();
+                    for(i=0;i<filters.length;i+=1){
+                        if(filters[i].equalsIgnoreCase("\\*") || filters[i].equalsIgnoreCase(cmd)){
+                            ArrayList<String> args = new ArrayList<>();
+                            if(str.length >= 2) {
+                                for(i=1;i<str.length;i+=1){
+                                    args.add(str[i]);
+                                }
+                            }
+                            onCommand(chat,user,str[0].substring(1),args);
+                            break;
                         }
                     }
-                    onCommand(chat,user,str[0].substring(1),args);
-                    break;
+                }else{
+                    if(user.characterID != Config.TELEGRAM_EMU_USERID){
+                        onText(chat,user,fullString);
+                    }
+                }
+                if(user.characterID != Config.TELEGRAM_EMU_USERID){
+                    onEvent(chat, user, fullString);
                 }
             }
-        }else{
-            if(user.characterID != Config.TELEGRAM_EMU_USERID){
-                onText(chat,user,fullString);
-            }
-        }
-        if(user.characterID != Config.TELEGRAM_EMU_USERID){
-            onEvent(chat, user, fullString);
-        }
+        });
     }
     public void callTelegram(String cmd){
         ChatModel emuChat = new ChatModel(0,0,Config.TELEGRAM_EMU_USERID,Config.TELEGRAM_EMU_USERID,Config.TELEGRAM_EMU_USERID,Config.WORLD_BOT_ID,"!" + cmd);

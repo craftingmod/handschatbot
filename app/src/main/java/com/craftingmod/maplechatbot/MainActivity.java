@@ -1,8 +1,11 @@
 package com.craftingmod.maplechatbot;
 
 import android.app.ActivityManager;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Message;
 import android.support.design.widget.FloatingActionButton;
@@ -23,13 +26,24 @@ import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
 import com.craftingmod.maplechatbot.chat.ChatService;
+import com.craftingmod.maplechatbot.model.FriendModel;
+import com.craftingmod.maplechatbot.model.SimpleUserModel;
 import com.craftingmod.maplechatbot.model.UserModel;
+import com.google.common.base.Splitter;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import android.os.Handler;
 
+import org.apache.commons.codec.binary.Base64;
+import org.ksoap2.serialization.SoapObject;
+import org.ksoap2.serialization.SoapSerializationEnvelope;
+import org.ksoap2.transport.HttpTransportSE;
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import eu.chainfire.libsuperuser.Shell;
 
@@ -37,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
 
     private LinearLayout mainLayout;
     private TextView info;
+    private Gson g;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
                 testDB();
             }
         });
+        g = new GsonBuilder().create();
 
         /*
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -76,6 +92,93 @@ public class MainActivity extends AppCompatActivity {
         execService();
 
         Log.d("WBUS", System.currentTimeMillis() + "");
+        final SharedPreferences pref = getSharedPreferences("pref", MODE_PRIVATE);
+        /*
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                SoapObject so = new SoapObject("http://api.maplestory.nexon.com/soap/", "GetAccountFriendList");
+                //so.addProperty("WorldID",3);
+                //so.addProperty("CharacterID", 85599666);
+                so.addProperty("AccountID", 23468404);
+                SoapSerializationEnvelope sObj = new SoapSerializationEnvelope(120);
+                sObj.setOutputSoapObject(so);
+                sObj.dotNet = true;
+                HttpTransportSE mo = new HttpTransportSE("http://api.maplestory.nexon.com/soap/MobileApp.asmx",10000);
+                mo.debug = false;
+                try {
+                    mo.call("http://api.maplestory.nexon.com/soap/GetAccountFriendList", sObj);
+                    SoapObject sob = (SoapObject) sObj.getResponse();
+
+                    String encoded = new String(Base64.encodeBase64(sob.toString().getBytes()));
+                    pref.edit().putString("test",encoded).apply();
+                    List<String> split = Splitter.on("AccountFriendList=anyType").trimResults().omitEmptyStrings().splitToList(sob.toString());
+                    for(int i=0;i<split.size();i+=1){
+                        Log.d("WBUS-HI", split.get(i));
+                    }
+
+                   // SoapObject ob2 = (SoapObject) ((SoapObject) ((SoapObject) sob.getProperty("diffgram")).getProperty("NewDataSet")).getProperty("dtCharacterInfo");
+                   // Log.d("WBUS", ob2.getPropertyAsString("AccountID"));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (XmlPullParserException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        */
+        MapleUtil.getInstance(this);
+        Promise.with(this,Boolean.class).then(new Task<Boolean, ArrayList<FriendModel>>() {
+            @Override
+            public void run(Boolean aBoolean, NextTask<ArrayList<FriendModel>> nextTask) {
+                MapleUtil.getInstance().getAccountFriendList(21517032,nextTask);
+            }
+        }).then(new Task<ArrayList<FriendModel>, Void>() {
+            @Override
+            public void run(ArrayList<FriendModel> friendModels, NextTask<Void> nextTask) {
+                for(int i=0;i<friendModels.size();i+=1){
+                    Log.d("WBUS",g.toJson(friendModels.get(i)));
+                }
+                nextTask.yield(0,null);
+            }
+        }).create().execute(true);
+        Promise.with(this, Boolean.class).then(new Task<Boolean, UserModel>() {
+            @Override
+            public void run(Boolean aBoolean, NextTask<UserModel> nextTask) {
+                MapleUtil.getInstance().getCharacterInfo(3, Config.CHAT_HANDS.SenderCID, nextTask);
+            }
+        }).then(new Task<UserModel, Void>() {
+            @Override
+            public void run(UserModel userModel, NextTask<Void> nextTask) {
+                Log.d("WBUS",g.toJson(userModel));
+                nextTask.yield(0,null);
+            }
+        }).create().execute(true);
+        Promise.with(this,Boolean.class).then(new Task<Boolean, Boolean>() {
+            @Override
+            public void run(Boolean aBoolean, NextTask<Boolean> nextTask) {
+                MapleUtil.getInstance().isGameLogin(Config.MASTER_ACCOUNT_ID, nextTask);
+            }
+        }).then(new Task<Boolean, Void>() {
+            @Override
+            public void run(Boolean aBoolean, NextTask<Void> nextTask) {
+                Log.d("WBUS",aBoolean?"true":"false");
+                nextTask.yield(0,null);
+            }
+        }).create().execute(true);
+        Promise.with(this,Boolean.class).then(new Task<Boolean, ArrayList<SimpleUserModel>>() {
+            @Override
+            public void run(Boolean aBoolean, NextTask<ArrayList<SimpleUserModel>> nextTask) {
+                MapleUtil.getInstance().getCharacterList(21517032,3,nextTask);
+            }
+        }).then(new Task<ArrayList<SimpleUserModel>, Void>() {
+            @Override
+            public void run(ArrayList<SimpleUserModel> simpleUserModels, NextTask<Void> nextTask) {
+                Log.d("WBUS",g.toJson(simpleUserModels));
+                nextTask.yield(0,null);
+            }
+        }).create().execute(true);
+
     }
     private void syncDB(){
         Shell.SU.run(new String[]{"rm -rf /data/mapleChat",

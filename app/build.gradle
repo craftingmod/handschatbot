@@ -16,9 +16,11 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        repositories {
+            maven { url 'http://ksoap2-android.googlecode.com/svn/m2-repo' }
+        }
     }
 }
-
 dependencies {
     compile fileTree(dir: './libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
@@ -27,4 +29,5 @@ dependencies {
     compile 'eu.chainfire:libsuperuser:1.0.0.+'
     compile 'com.github.pengrad:java-telegram-bot-api:1.2.3'
     compile 'com.android.support:design:23.1.1'
+    compile 'com.google.code.ksoap2-android:ksoap2-android:3.1.1'
 }

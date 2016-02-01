@@ -8,11 +8,20 @@ import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
+import com.anprosit.android.promise.NextTask;
+import com.anprosit.android.promise.Promise;
+import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.Config;
+import com.craftingmod.maplechatbot.MapleUtil;
 import com.craftingmod.maplechatbot.MyApplication;
+import com.craftingmod.maplechatbot.methods.GetCharacterInfo;
+import com.craftingmod.maplechatbot.methods.GetFriendList;
+import com.craftingmod.maplechatbot.methods.SelectCInfo;
 import com.craftingmod.maplechatbot.model.ChatModel;
+import com.craftingmod.maplechatbot.model.UserModel;
 import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -23,6 +32,8 @@ import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XC_MethodReplacement;
@@ -35,14 +46,28 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  */
 public class MessageHooker extends BaseMapleHooker {
 
+    protected Class<?> MapleDBManager;
+    protected Class<?> MapleInfoModel;
+    protected Class<?> SoapProtocol;
+
     private final Gson g = new GsonBuilder().create();
     private IntentFilter intentF;
+    private IntentFilter intentNativeMSG;
+
 
     public MessageHooker(XC_LoadPackage.LoadPackageParam pm) {
         super(pm);
         intentF = new IntentFilter();
         intentF.addAction(Config.SEND_MESSAGE);
+        intentF.addAction(Config.BROADCAST_MESSAGE);
         intentF.addAction(Config.TELEGRAM_MESSAGE);
+
+        intentNativeMSG = new IntentFilter();
+        intentNativeMSG.addAction(Config.INVOKE_NATIVE);
+
+        MapleDBManager = getMapleClass(".database.MHDatabaseManager");
+        MapleInfoModel = getMapleClass(".structdata.MHCharacterInfo");
+        SoapProtocol = getMapleClass(".SoapEx");
     }
 
     @Override
@@ -64,6 +89,7 @@ public class MessageHooker extends BaseMapleHooker {
 
                 Intent i = new Intent(Config.BROADCAST_MESSAGE);
                 i.putExtra("data", g.toJson(model));
+                i.putExtra("token",Config.ACCESS_BRAODCAST_TOKEN);
                 context.sendBroadcast(i);
             }
         });
@@ -78,7 +104,9 @@ public class MessageHooker extends BaseMapleHooker {
                 final Object _this = param.thisObject;
                 final Context context = ((Context) _this);
                 final ContextHook mReceiver = new ContextHook(_this);
+                final ContextMethod mNativeBroker = new ContextMethod(_this);
                 XposedHelpers.setAdditionalInstanceField(_this,"msgReceiver",mReceiver);
+                XposedHelpers.setAdditionalInstanceField(_this,"nativeCmdReceiver",mNativeBroker);
                 XposedHelpers.setAdditionalInstanceField(_this, "bot", TelegramBotAdapter.build(Config.TELEGRAM_BOT_TOKEN));
                 context.registerReceiver(mReceiver,intentF);
             }
@@ -90,7 +118,9 @@ public class MessageHooker extends BaseMapleHooker {
                 final Object _this = param.thisObject;
                 final Context context = ((Context) _this);
                 final ContextHook mReceiver = (ContextHook) XposedHelpers.getAdditionalInstanceField(_this, "msgReceiver");
+                final ContextMethod mNativeCMDReceiver = (ContextMethod) XposedHelpers.getAdditionalInstanceField(_this, "nativeCmdReceiver");
                 context.unregisterReceiver(mReceiver);
+                context.unregisterReceiver(mNativeCMDReceiver);
             }
         });
         /*
@@ -118,6 +148,47 @@ public class MessageHooker extends BaseMapleHooker {
         });
         */
     }
+    private class ContextMethod extends BroadcastReceiver {
+
+        private Object mainActivity; // MainTabsActivity
+
+        private Object mChatManager; // ChatManager
+        private Handler handler;
+
+        public ContextMethod(Object _mainAct){
+            mainActivity = _mainAct;
+        }
+
+        @Override
+        public void onReceive(final Context context, final Intent intent) {
+            if(!intent.hasExtra("type")){
+                return;
+            }
+            String type = intent.getStringExtra("type");
+            handler = new Handler(context.getMainLooper());
+            if(type.equalsIgnoreCase(GetFriendList.classname)){
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        List list = (List) XposedHelpers.callStaticMethod(SoapProtocol, "GetAccountFriendList", intent.getIntExtra("aid", Config.MASTER_ACCOUNT_ID));
+                        String toSend = g.toJson(list);
+                        Intent intent = new Intent(Config.GET_NATIVE);
+                        intent.putExtra("method", GetFriendList.classname);
+                        intent.putExtra("data", toSend);
+                        context.sendBroadcast(intent);
+                    }
+                });
+            }
+            if(type.equalsIgnoreCase(GetCharacterInfo.classname)){
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Object info = XposedHelpers.callStaticMethod(SoapProtocol,"GetCharacterInfo");
+                    }
+                });
+            }
+        }
+    }
     private class ContextHook extends BroadcastReceiver {
 
         private Object mainActivity; // MainTabsActivity
@@ -126,8 +197,11 @@ public class MessageHooker extends BaseMapleHooker {
         private TelegramBot bot;
         private int myAID;
 
+        private HashMap<Integer,UserModel> users;
+
         public ContextHook(Object _mainAct){
             mainActivity = _mainAct;
+            users = new HashMap<>();
         }
 
         @Override
@@ -137,7 +211,48 @@ public class MessageHooker extends BaseMapleHooker {
             if(!intent.hasExtra("token") || !intent.hasExtra("data") || !intent.getStringExtra("token").equals(Config.ACCESS_BRAODCAST_TOKEN)) {
                 return;
             }
-
+            if(action.equalsIgnoreCase(Config.BROADCAST_MESSAGE)){
+                final ChatModel model = g.fromJson(intent.getStringExtra("data"),ChatModel.class);
+                new Handler((Looper)XposedHelpers.callMethod(mainActivity,"getMainLooper")).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Promise.with(this,Boolean.class).then(new Task<Boolean, UserModel>() {
+                            @Override
+                            public void run(Boolean aBoolean, NextTask<UserModel> nextTask) {
+                                if(users.containsKey(model.SenderCID)){
+                                    nextTask.run(users.get(model.SenderCID));
+                                }else{
+                                    MapleUtil.getInstance().getCharacterInfo(model.WID,model.SenderCID,nextTask);
+                                }
+                            }
+                        }).then(new Task<UserModel, Void>() {
+                            @Override
+                            public void run(final UserModel userModel, NextTask<Void> nextTask) {
+                                if(!users.containsKey(userModel.characterID)){
+                                    users.put(userModel.characterID,userModel);
+                                }
+                                new AsyncTask<String, Void, Void>() {
+                                    @Override
+                                    protected Void doInBackground(String... params) {
+                                        try{
+                                            String uName = userModel.userName;
+                                            if(uName.length() <= 1){
+                                                uName = model.SenderAID + "";
+                                            }
+                                            bot.sendMessage(Config.MASTER_TELEGRAM_ID,"#" + uName + " : " + model.Msg);
+                                        }catch (Exception e){
+                                            e.printStackTrace();
+                                        }
+                                        return null;
+                                    }
+                                }.execute();
+                                nextTask.yield(0,null);
+                            }
+                        }).create().execute(true);
+                    }
+                });
+                return;
+            }
             if(action.equalsIgnoreCase(Config.TELEGRAM_MESSAGE)){
                 new AsyncTask<String, Void, Void>() {
                     @Override
