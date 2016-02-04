@@ -366,6 +366,8 @@ public class MessageHooker extends BaseMapleHooker {
                             prefix = "$";
                             if(masters.containsKey(aID)){
                                 uName = masters.get(aID).userName;
+                            }else{
+                                uName = uModel.accountID + "";
                             }
                         }else{
                             uName = uModel.userName;
