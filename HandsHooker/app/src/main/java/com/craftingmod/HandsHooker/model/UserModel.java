@@ -1,10 +1,7 @@
-package com.craftingmod.maplechatbot.model;
-
-import android.util.Log;
+package com.craftingmod.HandsHooker.model;
 
 import com.google.common.base.Splitter;
 
-import java.net.URL;
 import java.util.List;
 
 /**

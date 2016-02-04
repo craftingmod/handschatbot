@@ -26,6 +26,7 @@ import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
 import com.craftingmod.maplechatbot.chat.ChatService;
+import com.craftingmod.maplechatbot.chat.SyncService;
 import com.craftingmod.maplechatbot.model.FriendModel;
 import com.craftingmod.maplechatbot.model.SimpleUserModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -219,8 +220,9 @@ public class MainActivity extends AppCompatActivity {
                 .create().execute(0);
     }
     private void execService(){
-        Intent intent = new Intent(this, ChatService.class);
-        if(isServiceRunning(ChatService.class)){
+        //Intent intent = new Intent(this, ChatService.class);
+        Intent intent = new Intent(this, SyncService.class);
+        if(isServiceRunning(SyncService.class)){
             Snackbar.make(mainLayout, "Service is already running", Snackbar.LENGTH_SHORT).show();
         }else{
             startService(intent);

@@ -2,6 +2,7 @@ package com.craftingmod.maplechatbot;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.HandlerThread;
 import android.util.Log;
 
 import com.anprosit.android.promise.NextTask;
@@ -16,6 +17,7 @@ import org.ksoap2.serialization.SoapPrimitive;
 import org.ksoap2.serialization.SoapSerializationEnvelope;
 import org.ksoap2.transport.HttpTransportSE;
 import org.xmlpull.v1.XmlPullParserException;
+import android.os.Handler;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +32,8 @@ import java.util.Map;
 public class MapleUtil {
 
     private Context context;
+    private HandlerThread thread;
+    private Handler handler;
     private static MapleUtil instance;
     public static MapleUtil getInstance(Context context){
         if(instance == null){
@@ -38,128 +42,141 @@ public class MapleUtil {
         return instance;
     }
     public static MapleUtil getInstance(){
-        if(instance != null){
-            return instance;
-        }else{
-            return new MapleUtil();
+        if(instance == null){
+            instance = new MapleUtil();
         }
+        return instance;
     }
     public MapleUtil(Context ct){
+        this();
         context = ct;
     }
     public MapleUtil(){
+        thread = new HandlerThread("MapleUtil");
+        thread.start();
+        handler = new Handler(thread.getLooper());
     }
-    public void getAccountFriendList(int accountID, final NextTask<ArrayList<FriendModel>> task){
-        final String splitString = "AccountFriendList=anyType";
-        HashMap<String,Integer> map = new HashMap<>();
-        map.put("AccountID", accountID);
-        //noinspection unchecked
-        new AsyncTask<HashMap<String, Integer>, Void, String>() {
+    public void getAccountFriendList(final int accountID, final NextTask<ArrayList<FriendModel>> task){
+        handler.post(new Runnable() {
             @Override
-            protected String doInBackground(HashMap<String, Integer>... params) {
-                return callSOAP("GetAccountFriendList", params[0], 10);
-            }
-            @Override
-            protected void onPostExecute(String string) {
-                super.onPostExecute(string);
-                final ArrayList<FriendModel> out = new ArrayList<>();
-                Log.d("MapleUtil",string);
-                List<String> split = Splitter.on(splitString).trimResults().omitEmptyStrings().splitToList(string);
-                for(int k=0;k<split.size();k+=1){
-                    out.add(new FriendModel(split.get(k)));
+            public void run() {
+                try{
+                    task.run(getAccountFriendList(accountID));
+                }catch (Exception e){
+                    task.fail(null,e);
                 }
-                task.run(out);
             }
-        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, map);
+        });
     }
-    public void getCharacterList(final int accountID,int worldID,final NextTask<ArrayList<SimpleUserModel>> task){
-        HashMap<String,Integer> map = new HashMap<>();
+    public ArrayList<FriendModel> getAccountFriendList(int accountID){
+        final String splitString = "AccountFriendList=anyType";
+        final HashMap<String,Integer> map = new HashMap<>();
+        map.put("AccountID", accountID);
+
+        String string = callSOAP("GetAccountFriendList", map, 10);
+        final ArrayList<FriendModel> out = new ArrayList<>();
+       // Log.d("MapleUtil",string);
+        List<String> split = Splitter.on(splitString).trimResults().omitEmptyStrings().splitToList(string);
+        for(int k=0;k<split.size();k+=1){
+            out.add(new FriendModel(split.get(k)));
+        }
+        return out;
+    }
+    public ArrayList<SimpleUserModel> getCharacterList(int accountID,int worldID){
+        final HashMap<String,Integer> map = new HashMap<>();
         final String splitString = "Web_CharacterList=anyType";
         map.put("AccountID",accountID);
         map.put("WorldID", worldID);
-        new AsyncTask<HashMap<String,Integer>,Void,String>(){
-            @Override
-            protected String doInBackground(HashMap<String, Integer>... params) {
-                return callSOAP("GetCharacterList",params[0],10);
-            }
 
-            @Override
-            protected void onPostExecute(String s) {
-                super.onPostExecute(s);
-                Log.d("MapleUtil", s);
-                final ArrayList<SimpleUserModel> out = new ArrayList<>();
-                List<String> split = Splitter.on(splitString).trimResults().omitEmptyStrings().splitToList(s);
-                for(int k=1;k<split.size();k+=1){
-                    SimpleUserModel model = new SimpleUserModel(accountID,-1,"");
-                    String parseStr = split.get(k);
-                    parseStr = parseStr.replaceAll("anyType\\{\\}", "null");
-                    parseStr = parseStr.substring(parseStr.indexOf("{")+1,parseStr.indexOf("};"));
-                    List<String> maps = Splitter.on(";").trimResults().omitEmptyStrings().splitToList(parseStr);
-                    for(int j=0;j<maps.size();j+=1){
-                        String keyStr = maps.get(j);
-                        String key = keyStr.split("=")[0];
-                        String value = keyStr.split("=")[1];
-                        if(key.equalsIgnoreCase("GameWorldID")){
-                            model.worldID = Integer.parseInt(value);
-                        }
-                        if(key.equalsIgnoreCase("CharacterID")){
-                            model.characterID = Integer.parseInt(value);
-                        }
-                        if(key.equalsIgnoreCase("CharacterName")){
-                            model.userName = value;
-                        }
-                        if(key.equalsIgnoreCase("AccountID")){
-                            model.accountID = Integer.parseInt(value);
-                        }
-                        if(key.equalsIgnoreCase("RegisterDate")){
-                            model.registerDate = value;
-                        }
-                    }
-                    if(model.characterID > 0){
-                        out.add(model);
-                    }
+        String s = callSOAP("GetCharacterList",map,10);
+        //Log.d("MapleUtil", s);
+        final ArrayList<SimpleUserModel> out = new ArrayList<>();
+        List<String> split = Splitter.on(splitString).trimResults().omitEmptyStrings().splitToList(s);
+        for(int k=1;k<split.size();k+=1){
+            SimpleUserModel model = new SimpleUserModel(accountID,-1,"");
+            String parseStr = split.get(k);
+            parseStr = parseStr.replaceAll("anyType\\{\\}", "null");
+            parseStr = parseStr.substring(parseStr.indexOf("{")+1,parseStr.indexOf("};"));
+            List<String> maps = Splitter.on(";").trimResults().omitEmptyStrings().splitToList(parseStr);
+            for(int j=0;j<maps.size();j+=1){
+                String keyStr = maps.get(j);
+                String key = keyStr.split("=")[0];
+                String value = keyStr.split("=")[1];
+                if(key.equalsIgnoreCase("GameWorldID")){
+                    model.worldID = Integer.parseInt(value);
                 }
-                task.run(out);
-                // Web_CharacterList=anyType
+                if(key.equalsIgnoreCase("CharacterID")){
+                    model.characterID = Integer.parseInt(value);
+                }
+                if(key.equalsIgnoreCase("CharacterName")){
+                    model.userName = value;
+                }
+                if(key.equalsIgnoreCase("AccountID")){
+                    model.accountID = Integer.parseInt(value);
+                }
+                if(key.equalsIgnoreCase("RegisterDate")){
+                    model.registerDate = value;
+                }
             }
-        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,map);
+            if(model.characterID > 0){
+                out.add(model);
+            }
+        }
+        return out;
     }
-    public void isGameLogin(int accountID,final NextTask<Boolean> task){
-        HashMap<String,Integer> map = new HashMap<>();
+    public void getCharacterList(final int accountID,final int worldID,final NextTask<ArrayList<SimpleUserModel>> task){
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    task.run(getCharacterList(accountID, worldID));
+                } catch (Exception e) {
+                    task.fail(null, e);
+                }
+            }
+        });
+    }
+    public boolean isGameLogin(int accountID){
+        final HashMap<String,Integer> map = new HashMap<>();
         map.put("n4AccountID",accountID);
-        new AsyncTask<HashMap<String,Integer>,Void,SoapPrimitive>(){
-            @Override
-            protected SoapPrimitive doInBackground(HashMap<String, Integer>... params) {
-                return (SoapPrimitive)callSOAPtoOBJ("IsGameLogin",params[0],20);
-            }
-
-            @Override
-            protected void onPostExecute(SoapPrimitive ob) {
-                super.onPostExecute(ob);
-                task.run(Boolean.parseBoolean(ob.toString()));
-            }
-        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, map);
+        SoapPrimitive ob = (SoapPrimitive) callSOAPtoOBJ("IsGameLogin", map, 20);
+        return Boolean.parseBoolean(ob.toString());
     }
-    public void getCharacterInfo(final int worldID, final int characterID, final NextTask<UserModel> task){
-        HashMap<String,Integer> map = new HashMap<>();
+    public void isGameLogin(final int accountID,final NextTask<Boolean> task){
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                try{
+                    task.run(isGameLogin(accountID));
+                }catch (Exception e){
+                    task.fail(null,e);
+                }
+            }
+        });
+    }
+    public UserModel getCharacterInfo(final int worldID, final int characterID){
+        final HashMap<String,Integer> map = new HashMap<>();
         map.put("CharacterID", characterID);
         map.put("WorldID", worldID);
-        new AsyncTask<HashMap<String,Integer>,Void,String>(){
-            @Override
-            protected String doInBackground(HashMap<String, Integer>... params) {
-                return callSOAP("GetCharacterInfo",params[0],50);
-            }
 
+        String result = callSOAP("GetCharacterInfo",map,50);
+        // Log.d("MapleUtil", result);
+        UserModel out = new UserModel(0,characterID,"");
+        out.worldID = worldID;
+        out.parse(result);
+        return out;
+    }
+    public void getCharacterInfo(final int worldID, final int characterID, final NextTask<UserModel> task){
+        handler.post(new Runnable() {
             @Override
-            protected void onPostExecute(String s) {
-                super.onPostExecute(s);
-                Log.d("MapleUtil", s);
-                UserModel out = new UserModel(0,characterID,"");
-                out.worldID = worldID;
-                out.parse(s);
-                task.run(out);
+            public void run() {
+                try{
+                    task.run(getCharacterInfo(worldID, characterID));
+                }catch (Exception e){
+                    task.fail(null,e);
+                }
             }
-        }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, map);
+        });
     }
     private String callSOAP(String methodName, HashMap<String,Integer> params,int timeout){
 
