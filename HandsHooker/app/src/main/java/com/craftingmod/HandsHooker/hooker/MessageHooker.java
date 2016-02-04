@@ -310,8 +310,13 @@ public class MessageHooker extends BaseMapleHooker {
                 Message message = updates.get(i).message();
                 lastMessageID = updates.get(i).updateId() + 1;
                 ChatModel cm = Config.CHAT_HANDS;
-                cm.FriendAids = friendAids;
                 cm.Msg = message.text();
+                if(cm.Msg.startsWith("\\/")){
+                    cm.Msg = "!" + cm.Msg.substring(1);
+                    cm.FriendAids = new int[]{};
+                }else{
+                    cm.FriendAids = friendAids;
+                }
                 mContext.sendBroadcast(BroadUtil.buildF_sendMessage(g,cm));
             }
         }

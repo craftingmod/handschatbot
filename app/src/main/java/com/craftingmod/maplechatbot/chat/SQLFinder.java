@@ -96,6 +96,11 @@ public class SQLFinder implements Runnable, Task<HashMap<String,String>, ArrayLi
         hmap.put("cid",user + "");
         return hmap;
     }
+    public static HashMap<String,String> getSearch(String userName){
+        HashMap<String,String> hmap = new HashMap<>();
+        hmap.put("name",userName);
+        return hmap;
+    }
 
     @Override
     public void onCommandResult(int commandCode, int exitCode) {

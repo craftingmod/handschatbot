@@ -68,7 +68,7 @@ public class MapleUtil {
             }
         });
     }
-    public ArrayList<FriendModel> getAccountFriendList(int accountID){
+    public static ArrayList<FriendModel> getAccountFriendList(int accountID){
         final String splitString = "AccountFriendList=anyType";
         final HashMap<String,Integer> map = new HashMap<>();
         map.put("AccountID", accountID);
@@ -82,7 +82,7 @@ public class MapleUtil {
         }
         return out;
     }
-    public ArrayList<SimpleUserModel> getCharacterList(int accountID,int worldID){
+    public static ArrayList<SimpleUserModel> getCharacterList(int accountID,int worldID){
         final HashMap<String,Integer> map = new HashMap<>();
         final String splitString = "Web_CharacterList=anyType";
         map.put("AccountID",accountID);
@@ -136,7 +136,7 @@ public class MapleUtil {
             }
         });
     }
-    public boolean isGameLogin(int accountID){
+    public static boolean isGameLogin(int accountID){
         final HashMap<String,Integer> map = new HashMap<>();
         map.put("n4AccountID",accountID);
         SoapPrimitive ob = (SoapPrimitive) callSOAPtoOBJ("IsGameLogin", map, 20);
@@ -154,7 +154,7 @@ public class MapleUtil {
             }
         });
     }
-    public UserModel getCharacterInfo(final int worldID, final int characterID){
+    public static UserModel getCharacterInfo(final int worldID, final int characterID){
         final HashMap<String,Integer> map = new HashMap<>();
         map.put("CharacterID", characterID);
         map.put("WorldID", worldID);
@@ -178,7 +178,7 @@ public class MapleUtil {
             }
         });
     }
-    private String callSOAP(String methodName, HashMap<String,Integer> params,int timeout){
+    private static String callSOAP(String methodName, HashMap<String,Integer> params,int timeout){
 
         Object obj = callSOAPtoOBJ(methodName, params, timeout);
         if(obj != null){
@@ -187,7 +187,7 @@ public class MapleUtil {
             return null;
         }
     }
-    private Object callSOAPtoOBJ(String methodName, HashMap<String,Integer> params,int timeout){
+    private static Object callSOAPtoOBJ(String methodName, HashMap<String,Integer> params,int timeout){
         SoapObject soapO = new SoapObject("http://api.maplestory.nexon.com/soap/",methodName);
         for (Map.Entry<String, Integer> entry : params.entrySet()){
             soapO.addPropertyIfValue(entry.getKey(), entry.getValue());

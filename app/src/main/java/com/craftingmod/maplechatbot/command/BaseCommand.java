@@ -11,6 +11,7 @@ import android.util.Log;
 
 import com.craftingmod.maplechatbot.Config;
 import com.craftingmod.maplechatbot.chat.ISender;
+import com.craftingmod.maplechatbot.chat.UserDB;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 import com.google.gson.Gson;
@@ -29,6 +30,7 @@ public abstract class BaseCommand {
     protected int i;
     protected Context context;
     protected ISender api;
+    protected UserDB db;
     protected SharedPreferences sp;
     protected Gson g;
     public boolean slient = false;
@@ -38,6 +40,7 @@ public abstract class BaseCommand {
         api = sender;
         sp = context.getSharedPreferences("data",Context.MODE_PRIVATE);
         g = new GsonBuilder().create();
+        db = sender.getDB();
     }
     protected String getDataStr(String key){
         String data = sp.getString(key, "null");
@@ -135,9 +138,7 @@ public abstract class BaseCommand {
 
     protected void onText(ChatModel chat,UserModel user,String msg){}
     protected void onEvent(ChatModel chat,UserModel user,String msg){}
-    protected String[] filter(){
-        return new String[]{"\\*"};
-    }
+    protected abstract String[] filter();
     protected abstract void onCommand(ChatModel chat,UserModel user,String cmdName,@Nullable ArrayList<String> args);
     public void onSave(){}
 }

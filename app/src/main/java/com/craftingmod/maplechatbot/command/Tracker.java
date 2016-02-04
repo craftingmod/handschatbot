@@ -9,8 +9,10 @@ import com.anprosit.android.promise.Callback;
 import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
+import com.craftingmod.maplechatbot.MapleUtil;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
 import com.craftingmod.maplechatbot.chat.ISender;
+import com.craftingmod.maplechatbot.chat.SQLFinder;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -57,15 +59,12 @@ public class Tracker extends BaseCommand {
             args.add(user.userName);
         }
         final String nick = args.get(0);
-        Promise.with(this, Boolean.class).then(new Task<Boolean, HashMap<Integer,String>>() {
+        Promise.with(this, Boolean.class).then(new Task<Boolean, ArrayList<UserModel>>() {
             @Override
-            public void run(Boolean aBoolean, NextTask<HashMap<Integer,String>> task) {
-                HashMap<Integer,String> map = new HashMap<>();
-                map.put(CharacterFinder.NICKNAME,nick);
-                task.run(map);
+            public void run(Boolean aBoolean, NextTask<ArrayList<UserModel>> task) {
+                task.run(db.searchUser(SQLFinder.getSearch(nick)));
             }
-        }).then(CharacterFinder.getInstance())
-        .then(new Task<ArrayList<UserModel>, Integer>() {
+        }).then(new Task<ArrayList<UserModel>, Integer>() {
             @Override
             public void run(ArrayList<UserModel> userModels, NextTask<Integer> nextTask) {
                 if (userModels.size() == 0) {

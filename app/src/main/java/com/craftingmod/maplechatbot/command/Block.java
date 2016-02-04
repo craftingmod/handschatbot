@@ -12,6 +12,7 @@ import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.Config;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
 import com.craftingmod.maplechatbot.chat.ISender;
+import com.craftingmod.maplechatbot.chat.SQLFinder;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -53,14 +54,12 @@ public class Block extends BaseCommand {
     protected void onCommand(final ChatModel chat, final UserModel user,final String cmdName, @Nullable ArrayList<String> args) {
         if(args.size() == 1 && user.accountID == Config.MASTER_ACCOUNT_ID){
             Promise.with(this,String.class)
-                    .then(new Task<String, HashMap<Integer,String>>() {
+                    .then(new Task<String, ArrayList<UserModel>>() {
                         @Override
-                        public void run(String s, NextTask<HashMap<Integer, String>> nextTask) {
-                            HashMap<Integer,String> map = new HashMap<>();
-                            map.put(CharacterFinder.NICKNAME,s);
-                            nextTask.run(map);
+                        public void run(String s, NextTask<ArrayList<UserModel>> nextTask) {
+                            nextTask.run(db.searchUser(SQLFinder.getSearch(s)));
                         }
-                    }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, Integer>() {
+                    }).then(new Task<ArrayList<UserModel>, Integer>() {
                 @Override
                 public void run(ArrayList<UserModel> userModels, NextTask<Integer> nextTask) {
                     final int aid = userModels.get(0).accountID;

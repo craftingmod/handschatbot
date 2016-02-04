@@ -68,7 +68,7 @@ public class MainActivity extends AppCompatActivity {
         syncBt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                syncDB();
+               // syncDB();
             }
         });
         Button testBt = (Button) findViewById(R.id.testB);
@@ -221,8 +221,8 @@ public class MainActivity extends AppCompatActivity {
     }
     private void execService(){
         //Intent intent = new Intent(this, ChatService.class);
-        Intent intent = new Intent(this, SyncService.class);
-        if(isServiceRunning(SyncService.class)){
+        Intent intent = new Intent(this, ChatService.class);
+        if(isServiceRunning(ChatService.class)){
             Snackbar.make(mainLayout, "Service is already running", Snackbar.LENGTH_SHORT).show();
         }else{
             startService(intent);

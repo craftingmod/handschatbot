@@ -10,6 +10,7 @@ import com.anprosit.android.promise.Promise;
 import com.anprosit.android.promise.Task;
 import com.craftingmod.maplechatbot.chat.CharacterFinder;
 import com.craftingmod.maplechatbot.chat.ISender;
+import com.craftingmod.maplechatbot.chat.SQLFinder;
 import com.craftingmod.maplechatbot.model.ChatModel;
 import com.craftingmod.maplechatbot.model.MailModel;
 import com.craftingmod.maplechatbot.model.UserModel;
@@ -72,18 +73,17 @@ public class Mail extends BaseCommand {
         if(args.size() >= 2) {
             final String sender = args.get(0);
             Promise.with(this, String.class)
-                    .then(new Task<String, HashMap<Integer,String>>() {
+                    .then(new Task<String, ArrayList<UserModel>>() {
                         @Override
-                        public void run(String pm, NextTask<HashMap<Integer,String>> task) {
-                            HashMap<Integer,String> map = new HashMap<>();
-                            map.put(CharacterFinder.NICKNAME,pm);
-                            task.run(map);
+                        public void run(String pm, NextTask<ArrayList<UserModel>> task) {
+                            task.run(db.searchUser(SQLFinder.getSearch(pm)));
                         }
-                    }).then(CharacterFinder.getInstance()).then(new Task<ArrayList<UserModel>, Object>() {
+                    }).then(new Task<ArrayList<UserModel>, Object>() {
                 @Override
                 public void run(ArrayList<UserModel> userModels, NextTask<Object> nextTask) {
                     addMail(userModels.get(0).accountID, user, grap(args, 1));
                     sendMessage(sender + "(" + userModels.get(0).accountID + ") 에게 메일을 보냈습니다.", chat.SenderAID);
+                    nextTask.run(null);
                 }
             }).setCallback(new Callback<Object>() {
                 @Override

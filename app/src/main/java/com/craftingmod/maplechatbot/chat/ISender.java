@@ -9,4 +9,5 @@ public interface ISender {
     Context getContext();
     void sendMessage(String msg,int sender);
     void sendMessageAll(String msg);
+    UserDB getDB();
 }
