@@ -31,6 +31,8 @@ public class LogHooker extends BaseMapleHooker {
                 return null;
             }
         });
+
+
     }
     @Override
     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {

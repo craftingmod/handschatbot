@@ -12,22 +12,19 @@ public abstract class BaseMapleHooker extends XC_MethodHook {
 
     protected LoadPackageParam param;
     protected ClassLoader cl;
-    protected Class<?> chatModel;
-    protected Class<?> FragTalk;
-    protected Class<?> global;
-    protected Class<?> messageAdapter;
-    protected Class<?> chatManager;
-    protected Class<?> talkroom;
-    protected Class<?> talkActivity;
-    protected Class<?> splash;
+    protected final Class<?> chatModel;
+    protected final Class<?> FragTalk;
+    protected final Class<?> global;
+    protected final Class<?> messageAdapter;
+    protected final Class<?> chatManager;
+    protected final Class<?> talkroom;
+    protected final Class<?> talkActivity;
+    protected final Class<?> splash;
 
 
     public BaseMapleHooker(LoadPackageParam pm){
         param = pm;
         cl = param.classLoader;
-        initClasses();
-    }
-    protected void initClasses(){
         chatModel = getMapleClass(".ChatMessageModel");
         FragTalk = getMapleClass(".maplechat.talk.FragmentMapleTalkMessages");
         global = getMapleClass(".G");
