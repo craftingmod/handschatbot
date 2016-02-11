@@ -14,6 +14,7 @@ import com.craftingmod.maplechatbot.chat.CharacterFinder;
 import com.craftingmod.maplechatbot.chat.ISender;
 import com.craftingmod.maplechatbot.chat.SQLFinder;
 import com.craftingmod.maplechatbot.model.ChatModel;
+import com.craftingmod.maplechatbot.model.FriendModel;
 import com.craftingmod.maplechatbot.model.SimpleUserModel;
 import com.craftingmod.maplechatbot.model.UserModel;
 import com.google.common.base.Joiner;
@@ -31,13 +32,47 @@ public class UserInfo extends BaseCommand {
 
     @Override
     protected String[] filter(){
-        return new String[]{"user","image"};
+        return new String[]{"user","image","friends"};
     }
 
     @Override
     protected void onCommand(ChatModel chat, final UserModel user, final String cmdName, @Nullable ArrayList<String> args) {
         if(args.size() != 1){
             this.sendMessage("사용법: !"+cmdName+" <유저이름>",user.accountID);
+            return;
+        }
+        if(cmdName.equalsIgnoreCase("friends")){
+            Promise.with(this, String.class).then(new Task<String, ArrayList<UserModel>>() {
+                @Override
+                public void run(String s, NextTask<ArrayList<UserModel>> nextTask) {
+                    nextTask.run(db.searchUser(SQLFinder.getSearch(s)));
+                }
+            }).then(new Task<ArrayList<UserModel>, ArrayList<FriendModel>>() {
+                @Override
+                public void run(final ArrayList<UserModel> userModels, final NextTask<ArrayList<FriendModel>> nextTask) {
+                    if(userModels.size() == 1){
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                nextTask.run(MapleUtil.getAccountFriendList(userModels.get(0).accountID));
+                            }
+                        }).start();
+                    }else{
+                        sendMessage("빼애액",user.accountID);
+                        nextTask.yield(0,null);
+                    }
+                }
+            }).then(new Task<ArrayList<FriendModel>, Void>() {
+                @Override
+                public void run(ArrayList<FriendModel> friendModels, NextTask<Void> nextTask) {
+                    ArrayList<String> names = new ArrayList<>();
+                    for (int i = 0; i < friendModels.size(); i += 1) {
+                        names.add(friendModels.get(i).nickname);
+                    }
+                    sendMessage(Joiner.on(",").join(names), user.accountID);
+                    nextTask.yield(0, null);
+                }
+            }).create().execute(args.get(0));
             return;
         }
         final String name = args.get(0);

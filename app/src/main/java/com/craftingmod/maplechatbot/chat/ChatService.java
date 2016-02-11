@@ -26,6 +26,7 @@ import com.craftingmod.maplechatbot.command.Help;
 import com.craftingmod.maplechatbot.command.Info;
 import com.craftingmod.maplechatbot.command.Lotto;
 import com.craftingmod.maplechatbot.command.Mail;
+import com.craftingmod.maplechatbot.command.OXQuiz;
 import com.craftingmod.maplechatbot.command.Tracker;
 import com.craftingmod.maplechatbot.command.UserInfo;
 import com.craftingmod.maplechatbot.model.ChatModel;
@@ -147,6 +148,7 @@ public class ChatService extends Service implements ISender {
         commands.add(new Help(this));
         commands.add(new Info(this));
         commands.add(new BackDel(this));
+        commands.add(new OXQuiz(this));
         blocks = new Block(this);
         commands.add(blocks);
 
@@ -177,6 +179,7 @@ public class ChatService extends Service implements ISender {
                         .setContentTitle("Chatbot Service.")
                         .setContentText("It is running!");
         startForeground(5371, mBuilder.build());
+
         /**
          * Update all aids for hands
          */
