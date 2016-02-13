@@ -6,8 +6,12 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -219,9 +223,19 @@ public class MainActivity extends AppCompatActivity {
                 })
                 .create().execute(0);
     }
-    private void execService(){
+    private void execService() {
         //Intent intent = new Intent(this, ChatService.class);
         Intent intent = new Intent(this, ChatService.class);
+        String packageName = this.getPackageName();
+        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (pm.isIgnoringBatteryOptimizations(packageName)){
+                intent.setAction(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+            }else {
+                intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + packageName));
+            }
+        }
         if(isServiceRunning(ChatService.class)){
             Snackbar.make(mainLayout, "Service is already running", Snackbar.LENGTH_SHORT).show();
         }else{
