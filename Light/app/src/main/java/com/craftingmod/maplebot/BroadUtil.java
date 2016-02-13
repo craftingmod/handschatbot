@@ -17,7 +17,6 @@ public class BroadUtil {
     public static final String REQUEST_ONLINE = "broadcast.maple.reqOnline";
     public static final String RECEIVE_ONLINE = "broadcast.maple.recOnline";
 
-    private static final String ACCESS_BROADCAST_TOKEN = "67FC62497E85D81BC54EA07AA87DCA6868CD470E95D7281155A8EB532CE60009";
 
 
     public static final int TYPE_FRIEND = 7123;
@@ -26,27 +25,27 @@ public class BroadUtil {
         Intent i = new Intent(RECEIVE_MESSAGE);
         i.putExtra("data", g.toJson(model));
         i.putExtra("type", TYPE_FRIEND);
-        i.putExtra("token", ACCESS_BROADCAST_TOKEN);
+        i.putExtra("token", Config.ACCESS_BROADCAST_TOKEN);
         return i;
     }
     public static Intent buildG_Message(Gson g,ChatModel model){
         Intent i = new Intent(RECEIVE_MESSAGE);
         i.putExtra("data", g.toJson(model));
         i.putExtra("type", TYPE_GUILD);
-        i.putExtra("token", ACCESS_BROADCAST_TOKEN);
+        i.putExtra("token", Config.ACCESS_BROADCAST_TOKEN);
         return i;
     }
     public static Intent buildF_sendMessage(Gson g,ChatModel model){
         Intent i = new Intent(SEND_MESSAGE);
         i.putExtra("data", g.toJson(model));
         i.putExtra("type", TYPE_FRIEND);
-        i.putExtra("token", ACCESS_BROADCAST_TOKEN);
+        i.putExtra("token", Config.ACCESS_BROADCAST_TOKEN);
         return i;
     }
     public static Intent buildT_sendMessage(String text){
         Intent i = new Intent(SEND_TELEGRAM);
         i.putExtra("data", text);
-        i.putExtra("token", ACCESS_BROADCAST_TOKEN);
+        i.putExtra("token", Config.ACCESS_BROADCAST_TOKEN);
         return i;
     }
 }
