@@ -67,6 +67,11 @@ public class Coin extends CoreModule {
     }
 
     @Override
+    public String[] help() {
+        return new String[]{"!coin <아무거나> : \'예\' 또는 \'아니오\'가 땡그랑"};
+    }
+
+    @Override
     protected String[] filter() {
         return new String[]{"coin","동전"};
     }

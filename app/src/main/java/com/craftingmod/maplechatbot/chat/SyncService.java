@@ -130,6 +130,7 @@ public class SyncService extends Service implements Shell.OnCommandLineListener 
         String createSql = "CREATE TABLE `character_table_info` (   `aid` INT NOT NULL, `cid` INT NOT NULL, `wid` INT NOT NULL, `type` INT NOT NULL,    `level` INT NOT NULL,   `gender` INT NOT NULL,  `pop` INT NOT NULL, `totalrank` INT NOT NULL,   `worldrank` INT NOT NULL,   `jobrank` INT NOT NULL, `poprank` INT NOT NULL,   `exp` BIGINT(20) NOT NULL,    `name` VARCHAR(25) NOT NULL,    `nick_name`   VARCHAR(25) NOT NULL,     `wname` VARCHAR(25) NOT NULL,   `jobname` VARCHAR(25) NOT NULL,     `jobdetail` VARCHAR(25) NOT NULL,   `update_date` BIGINT(20) NOT NULL,  `wimg_url` VARCHAR(512) NOT NULL,   `img_url` VARCHAR(512) NOT NULL);";
         mManager.execSQL(createSql);
         mManager.execSQL("CREATE TABLE 'masterCharacter' ('accountID' INT NOT NULL,'charID' INT NOT NULL,'nickname' VARCHAR(25));");
+        mManager.execSQL((createSql+"").replace("character_table_info","users"));
         mManager.db.beginTransaction();
         /*
         shell.addCommand("rm -rf /data/mapleHands");
@@ -178,7 +179,7 @@ public class SyncService extends Service implements Shell.OnCommandLineListener 
         build.append(" , ");
         build.append(model.Exp);
         build.append(" , ");
-        build.append(getString(model.userName));
+        build.append(getString(model.userName.toLowerCase()));
         build.append(" , ");
         build.append(getString(null));
         build.append(" , ");

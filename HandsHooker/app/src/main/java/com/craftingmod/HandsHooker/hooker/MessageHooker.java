@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.util.Log;
 
 import com.anprosit.android.promise.NextTask;
 import com.anprosit.android.promise.Promise;
@@ -15,6 +16,8 @@ import com.anprosit.android.promise.Task;
 import com.craftingmod.HandsHooker.BroadUtil;
 import com.craftingmod.HandsHooker.Config;
 import com.craftingmod.HandsHooker.MapleUtil;
+import com.craftingmod.HandsHooker.communicate.BaseSocket;
+import com.craftingmod.HandsHooker.communicate.CharSearch;
 import com.craftingmod.HandsHooker.model.ChatModel;
 import com.craftingmod.HandsHooker.model.CoreUserModel;
 import com.craftingmod.HandsHooker.model.FriendModel;
@@ -31,6 +34,7 @@ import com.pengrad.telegrambot.TelegramBotAdapter;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,6 +59,7 @@ public class MessageHooker extends BaseMapleHooker {
     protected final Class<?> ModelOnline;
     protected final Class<?> chatThread;
 
+    private final BaseSocket socketOnline;
     private final Gson g = new GsonBuilder().create();
     private IntentFilter intentF;
 
@@ -62,21 +67,22 @@ public class MessageHooker extends BaseMapleHooker {
 
     public MessageHooker(XC_LoadPackage.LoadPackageParam pm) {
         super(pm);
-        intentF = new IntentFilter();
-        intentF.addAction(BroadUtil.RECEIVE_MESSAGE);
-        intentF.addAction(BroadUtil.SEND_MESSAGE);
-        intentF.addAction(BroadUtil.SEND_TELEGRAM);
-        intentF.addAction(BroadUtil.REQUEST_GUILD);
-        intentF.addAction(BroadUtil.RECEIVE_GUILD);
-        intentF.addAction(BroadUtil.REQUEST_ONLINE);
-
-
         MapleDBManager = getMapleClass(".database.MHDatabaseManager");
         MapleInfoModel = getMapleClass(".structdata.MHCharacterInfo");
         SoapProtocol = getMapleClass(".SoapEx");
         NativeClass = XposedHelpers.findClass("com.Nexon.Common.NativeClass", cl);
         ModelOnline = getMapleClass(".structdata.MHOlineInfo");
         chatThread = getMapleClass(".ChatManager.ChatThread");
+        socketOnline = BaseSocket.buildClient(null,"onlineinfo");
+
+        intentF = new IntentFilter();
+        intentF.addAction(BroadUtil.RECEIVE_MESSAGE);
+        intentF.addAction(BroadUtil.SEND_MESSAGE);
+        intentF.addAction(BroadUtil.SEND_TELEGRAM);
+        intentF.addAction(BroadUtil.REQUEST_GUILD);
+        intentF.addAction(BroadUtil.RECEIVE_GUILD);
+        //intentF.addAction(BroadUtil.REQUEST_ONLINE);
+        intentF.addAction(socketOnline.REQUEST);
     }
     /**
      * Broadcast 1
@@ -140,6 +146,7 @@ public class MessageHooker extends BaseMapleHooker {
 
                 GuildModel model = new GuildModel(guildID,guildGrade,guildName);
                 model.setUser(accountID, characterID, (int) args[1]);
+                XposedBridge.log("-Received Guild " + g.toJson(model));
                 Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
                 context.sendBroadcast(BroadUtil.buildN_sendGuild(g, model));
             }
@@ -159,8 +166,15 @@ public class MessageHooker extends BaseMapleHooker {
                             XposedHelpers.getIntField(ob,"aid"),XposedHelpers.getIntField(ob,"cid"),XposedHelpers.getByteField(ob, "bOnline") >= 1);
                     sends.add(model);
                 }
+                Log.d("OnGetOnlineUserRequest",g.toJson(sends));
+
+                Intent intent = new Intent(socketOnline.RECEIVE);
+                intent.putExtra("id", "*");
+                Type type = new TypeToken<ArrayList<OnlineModel>>(){}.getType();
+                intent.putExtra("data",g.toJson(sends,type));
+
                 Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
-                context.sendBroadcast(BroadUtil.buildN_sendOnline(g,sends));
+                context.sendBroadcast(intent);
             }
         });
 
@@ -391,7 +405,11 @@ public class MessageHooker extends BaseMapleHooker {
                         if(Guild){
                             prefix = prefix + "G_";
                         }
-                        bot.sendMessage(Config.MASTER_TELEGRAM_ID,prefix + uName +  " : " + cModel.Msg);
+                        try{
+                            bot.sendMessage(Config.MASTER_TELEGRAM_ID,prefix + uName +  " : " + cModel.Msg);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
                     }
                 });
                 return;
@@ -427,21 +445,22 @@ public class MessageHooker extends BaseMapleHooker {
              public int cid;
              }
              */
-            if(action.equalsIgnoreCase(BroadUtil.REQUEST_ONLINE)){
+            if(action.equalsIgnoreCase(socketOnline.REQUEST)){
                 Type type = new TypeToken<ArrayList<CoreUserModel>>(){}.getType();
                 ArrayList<CoreUserModel> searches = g.fromJson(intent.getStringExtra("data"), type);
-                ArrayList<Object> params = new ArrayList<>();
                 //  NativeGetOnlineUserRequest(int paramInt1, int paramInt2, MHOlineInfo[] paramArrayOfMHOlineInfo);
+                Object params = Array.newInstance(ModelOnline,searches.size());
                 for(int i=0;i<searches.size();i+=1){
                     CoreUserModel cModel = searches.get(i);
-                    Object model = XposedHelpers.newInstance(ModelOnline, Void.class);
+                    Object model = XposedHelpers.newInstance(ModelOnline);
                     XposedHelpers.setObjectField(model,"aid",cModel.accountID);
                     XposedHelpers.setObjectField(model,"cid",cModel.characterID);
-                    XposedHelpers.setObjectField(model,"bOnline",0);
-                    params.add(model);
+                    XposedHelpers.setObjectField(model,"bOnline",(byte)0);
+                    Array.set(params,i,model);
                 }
-                XposedHelpers.callStaticMethod(chatManager, "NativeGetOnlineUserRequest",
-                        myAID, Config.WORLD_BOT_ID, Iterables.toArray(params, Object.class));
+                Log.d("Request Online",intent.getStringExtra("data"));
+                XposedHelpers.callStaticMethod(chatManager, "NativeGetOnlineUserRequest",new Class[]{int.class,int.class,getArrayClass(ModelOnline)},
+                        myAID, Config.WORLD_BOT_ID, params);
                 return;
             }
 
@@ -505,6 +524,10 @@ public class MessageHooker extends BaseMapleHooker {
 
             }
         }
+    }
+    @SuppressWarnings("unchecked")
+    private static <T> Class<? extends T[]> getArrayClass(Class<T> clazz) {
+        return (Class<? extends T[]>) Array.newInstance(clazz, 0).getClass();
     }
     // int paramInt1, int paramInt2, int paramInt3, int paramInt4, long paramLong, byte[] paramArrayOfByte, byte paramByte
 }

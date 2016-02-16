@@ -3,7 +3,12 @@ package com.craftingmod.maplebot;
 import android.content.Intent;
 
 import com.craftingmod.maplebot.model.ChatModel;
+import com.craftingmod.maplebot.model.CoreUserModel;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 
 /**
  * Created by superuser on 16/2/4.
@@ -45,6 +50,13 @@ public class BroadUtil {
     public static Intent buildT_sendMessage(String text){
         Intent i = new Intent(SEND_TELEGRAM);
         i.putExtra("data", text);
+        i.putExtra("token", Config.ACCESS_BROADCAST_TOKEN);
+        return i;
+    }
+    public static Intent buildN_reqOnline(Gson g,ArrayList<CoreUserModel> models){
+        Type type = new TypeToken<ArrayList<CoreUserModel>>(){}.getType();
+        Intent i = new Intent(REQUEST_ONLINE);
+        i.putExtra("data", g.toJson(models,type));
         i.putExtra("token", Config.ACCESS_BROADCAST_TOKEN);
         return i;
     }

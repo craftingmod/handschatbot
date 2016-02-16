@@ -35,6 +35,11 @@ public class BotStatus extends CoreModule {
     }
 
     @Override
+    public String[] help() {
+        return new String[]{"!version : 봇의 버전을 출력합니다.","!uptime : 봇이 작동한 시간을 출력합니다."};
+    }
+
+    @Override
     protected String[] filter() {
         return new String[]{"version","uptime"};
     }

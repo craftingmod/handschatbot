@@ -30,6 +30,11 @@ public class Calc extends CoreModule {
     }
 
     @Override
+    public String[] help() {
+        return new String[]{"!calc <수식> : 간단한 수식을 계산합니다. 잘 안되지만."};
+    }
+
+    @Override
     protected String[] filter() {
         return new String[]{"calc"};
     }

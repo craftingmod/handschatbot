@@ -44,8 +44,6 @@ public final class CharacterFinder implements Task<HashMap<Integer,String>, Arra
     private ArrayList<UserModel> row;
     protected Gson g;
     protected Long lastSync;
-    private HandlerThread thread;
-    private Handler handler;
 
     private static CharacterFinder instance;
 
@@ -57,9 +55,6 @@ public final class CharacterFinder implements Task<HashMap<Integer,String>, Arra
     }
 
     private CharacterFinder(){
-        thread = new HandlerThread("CharacterFinder");
-        thread.start();
-        handler = new Handler(thread.getLooper());
         g = new GsonBuilder().create();
         lastSync = 0L;
     }
@@ -70,46 +65,41 @@ public final class CharacterFinder implements Task<HashMap<Integer,String>, Arra
         }
         genSQL(param);
         Log.d("MapleInfoSQL", "Search data:" + g.toJson(param));
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                ArrayList<UserModel> output = new ArrayList<>();
-                if (param.containsKey(ACCOUNT_ID)) {
-                    List<UserModel> user = users.get(Integer.parseInt(param.get(ACCOUNT_ID)));
-                    if(user != null){
-                        for (int i = 0; i < user.size(); i += 1) {
-                            final UserModel loopModel = user.get(i);
-                            if (param.containsKey(CHARACTER_ID)) {
-                                if (loopModel.characterID == Integer.parseInt(param.get(CHARACTER_ID))) {
-                                    output.add(loopModel);
-                                }
-                            } else {
-                                output.add(loopModel);
-                            }
+        ArrayList<UserModel> output = new ArrayList<>();
+        if (param.containsKey(ACCOUNT_ID)) {
+            List<UserModel> user = users.get(Integer.parseInt(param.get(ACCOUNT_ID)));
+            if(user != null){
+                for (int i = 0; i < user.size(); i += 1) {
+                    final UserModel loopModel = user.get(i);
+                    if (param.containsKey(CHARACTER_ID)) {
+                        if (loopModel.characterID == Integer.parseInt(param.get(CHARACTER_ID))) {
+                            output.add(loopModel);
                         }
-                    }
-                    if (user != null && user.size() >= 1 && output.size() == 0) {
-                        // New character
-                        user.get(0).userName = "$" + user.get(0).userName;
-                        output.add(user.get(0));
-                    }
-                } else {
-                    if (param.containsKey(NICKNAME)) {
-                        for (int i = 0; i < row.size(); i += 1) {
-                            if (row.get(i).userName.equalsIgnoreCase(param.get(NICKNAME))) {
-                                output.add(row.get(i));
-                                break;
-                            }
-                        }
-                    }
-                    if(param.containsKey(ALL)){
-                        task.run(row);
-                        return;
+                    } else {
+                        output.add(loopModel);
                     }
                 }
-                task.run(output);
             }
-        });
+            if (user != null && user.size() >= 1 && output.size() == 0) {
+                // New character
+                user.get(0).userName = "$" + user.get(0).userName;
+                output.add(user.get(0));
+            }
+        } else {
+            if (param.containsKey(NICKNAME)) {
+                for (int i = 0; i < row.size(); i += 1) {
+                    if (row.get(i).userName.equalsIgnoreCase(param.get(NICKNAME))) {
+                        output.add(row.get(i));
+                        break;
+                    }
+                }
+            }
+            if(param.containsKey(ALL)){
+                task.run(row);
+                return;
+            }
+        }
+        task.run(output);
     }
     public static UserModel parse(String oneline){
         String[] piece = oneline.split("\\|");

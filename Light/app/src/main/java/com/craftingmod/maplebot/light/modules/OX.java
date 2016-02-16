@@ -4,9 +4,9 @@ import android.content.res.Resources;
 import android.text.TextUtils;
 
 import com.craftingmod.maplebot.light.IService;
-import com.craftingmod.maplebot.light.R;
+import com.craftingmod.maplebot.R;
 import com.craftingmod.maplebot.model.ChatModel;
-import com.craftingmod.maplebot.model.OXModel;
+import com.craftingmod.maplebot.light.model.OXModel;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.InputStream;
@@ -55,6 +55,11 @@ public class OX extends CoreModule {
     @Override
     public String getName() {
         return "OXQuiz";
+    }
+
+    @Override
+    public String[] help() {
+        return new String[]{"!ox <검색 내용> : 검색 내용이 들어간 ox퀴즈 답을 5개까지 알려줘요"};
     }
 
     @Override

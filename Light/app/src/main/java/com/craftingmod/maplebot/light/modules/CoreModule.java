@@ -90,8 +90,12 @@ public abstract class CoreModule extends Handler {
         out.append((int)Math.floor(sec) + "." + subSec + "초");
         return out.toString();
     }
+    public String[] getHelp(){
+        return help();
+    }
 
     protected abstract String onCommand(ChatModel chat,String cmd,ArrayList<String> args);
     public abstract String getName();
+    public abstract String[] help();
     protected abstract String[] filter();
 }
