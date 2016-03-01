@@ -1,1 +1,4 @@
-include ':app'
+include ':search', ':hook', ':service', ':launch'
+project(':search').projectDir = new File('search')
+project(':hook').projectDir = new File('hook')
+project(':service').projectDir = new File('service')
