@@ -17,7 +17,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         repositories {
-            maven { url 'http://ksoap2-android.googlecode.com/svn/m2-repo' }
+            maven { url 'https://oss.sonatype.org/content/repositories/ksoap2-android-releases' }
         }
     }
 }
@@ -27,5 +27,5 @@ dependencies {
 
     compile 'com.google.code.gson:gson:2.3'
     compile 'com.github.pengrad:java-telegram-bot-api:1.2.3'
-    compile 'com.google.code.ksoap2-android:ksoap2-android:3.1.1'
+    compile 'com.google.code.ksoap2-android:ksoap2-android:3.6.2'
 }

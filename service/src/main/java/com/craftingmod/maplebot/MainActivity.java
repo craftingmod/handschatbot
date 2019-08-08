@@ -15,13 +15,17 @@ import com.craftingmod.maplebot.BroadUtil;
 import com.craftingmod.maplebot.R;
 import com.craftingmod.maplebot.heavy.HeavyService;
 import com.craftingmod.maplebot.model.CoreUserModel;
+import com.craftingmod.maplebot.model.FriendModel;
 import com.craftingmod.maplebot.model.OnlineModel;
+import com.craftingmod.maplebot.model.SimpleUserModel;
+import com.craftingmod.maplebot.model.UserModel;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import android.os.Handler;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -39,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent i = new Intent();
                 i.setComponent(new ComponentName("com.craftingmod.maplebot.launcher","com.craftingmod.maplebot.launcher.LaunchService"));
-                startService(i);
+                //startService(i);
             }
         });
         findViewById(R.id.sync).setOnClickListener(new View.OnClickListener() {
@@ -47,12 +51,29 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Intent i = new Intent();
                 i.setComponent(new ComponentName("com.craftingmod.maplebot.launcher","com.craftingmod.maplebot.launcher.SyncService"));
-                startService(i);
+                //startService(i);
             }
         });
-        /*
         ArrayList<CoreUserModel> models = new ArrayList<>();
-        models.add(new CoreUserModel(17731671,85724972));
+        models.add(new CoreUserModel(99007258,91263605));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                ArrayList<String> mong = new ArrayList<String>();
+
+                for(int i=1;i<13;i+=1){
+                    ArrayList<SimpleUserModel> ar = MapleUtil.getCharacterList(11082628,i);
+                    for(int k=0;k<ar.size();k+=1){
+                        mong.add(ar.get(k).userName);
+                    }
+                }
+                Log.d("Get",g.toJson(mong));
+                //ArrayList<SimpleUserModel> ar = MapleUtil.getCharacterList(99007258,3);
+                //Log.d("Get",g.toJson(ar));
+                //ArrayList<FriendModel> arF = MapleUtil.getAccountFriendList(99007258);
+                //Log.d("Get",g.toJson(arF));
+            }
+        }).start();
         r = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -61,9 +82,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("Get",g.toJson(models));
             }
         };
-        this.registerReceiver(r,new IntentFilter("broadcast.maple.recOnline"));
-        sendBroadcast(BroadUtil.buildN_reqOnline(g,models));
-        */
+        //this.registerReceiver(r,new IntentFilter("broadcast.maple.recOnline"));
+        //sendBroadcast(BroadUtil.buildN_reqOnline(g,models));
     }
 
     @Override

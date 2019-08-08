@@ -18,7 +18,7 @@ android {
         }
         repositories {
             maven {
-                url 'http://ksoap2-android.googlecode.com/svn/m2-repo'
+                url 'https://oss.sonatype.org/content/repositories/ksoap2-android-releases'
             }
         }
     }
@@ -31,7 +31,6 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'com.google.code.gson:gson:2.4'
-    compile 'com.google.code.ksoap2-android:ksoap2-android:3.1.1'
+    compile 'com.google.code.ksoap2-android:ksoap2-android:3.6.2'
     compile 'com.android.support:design:23.1.1'
-    compile 'com.google.apis:google-api-services-urlshortener:v1-rev43-1.21.0'
 }
